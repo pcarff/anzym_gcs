@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: gcs-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://gcs_user:gcs_password@postgres:5432/gcs_db
+      - REDIS_URL=redis://redis:6379/0
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=gcs-influx-token
+      - INFLUXDB_ORG=gcs-org
+      - INFLUXDB_BUCKET=telemetry
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_SECURE=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+      minio:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+    networks:
+      - gcs-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: gcs-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: gcs_user
+      POSTGRES_PASSWORD: gcs_password
+      POSTGRES_DB: gcs_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gcs_user -d gcs_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gcs-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: gcs-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - gcs-network
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: gcs-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: admin-password
+      DOCKER_INFLUXDB_INIT_ORG: gcs-org
+      DOCKER_INFLUXDB_INIT_BUCKET: telemetry
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: gcs-influx-token
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - gcs-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: gcs-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - gcs-network
+
+  frontend:
+    build: ./frontend
+    container_name: gcs-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - gcs-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  influxdb_data:
+  minio_data:
+
+networks:
+  gcs-network:
+    driver: bridge
