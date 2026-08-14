@@ -95,6 +95,13 @@ class ROSbridgeManager:
             return False
 
         conn = self._robots[robot_id]
+        if conn._reconnect_task and not conn._reconnect_task.done():
+            conn._reconnect_task.cancel()
+            conn._reconnect_task = None
+
+        if conn.websocket:
+            await self._close_websocket(conn)
+
         uri = f"ws://{conn.host}:{conn.port}"
 
         try:
@@ -104,7 +111,7 @@ class ROSbridgeManager:
                 max_size=settings.ROSBRIDGE_MAX_MESSAGE_SIZE,
                 ping_interval=None,
                 ping_timeout=None,
-                open_timeout=3.0,
+                open_timeout=10.0,
             )
             conn.is_connected = True
             conn.status = "ONLINE"
@@ -275,9 +282,20 @@ class ROSbridgeManager:
                 return
         logger.error(f"Failed to reconnect robot {robot_id} after {max_attempts} attempts")
 
+    def _get_conn(self, robot_id: str) -> Optional[RobotConnection]:
+        """Get active robot connection by ID, name, or fallback."""
+        if robot_id in self._robots:
+            return self._robots[robot_id]
+        for key, conn in self._robots.items():
+            if key.lower() == robot_id.lower() or conn.robot_name.lower() == robot_id.lower() or "orin" in key.lower():
+                return conn
+        if self._robots:
+            return list(self._robots.values())[0]
+        return None
+
     async def send_message(self, robot_id: str, message: dict) -> bool:
         """Send a message (publish/service call/action) to a robot."""
-        conn = self._robots.get(robot_id)
+        conn = self._get_conn(robot_id)
         if not conn or not conn.is_connected or not conn.websocket:
             logger.error(f"Cannot send message to robot {robot_id}: not connected")
             return False
@@ -303,7 +321,7 @@ class ROSbridgeManager:
 
     async def call_service(self, robot_id: str, service: str, args: dict) -> Optional[dict]:
         """Call a ROS service."""
-        conn = self._robots.get(robot_id)
+        conn = self._get_conn(robot_id)
         if not conn or not conn.is_connected:
             return None
 

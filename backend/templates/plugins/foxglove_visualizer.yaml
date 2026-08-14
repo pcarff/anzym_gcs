@@ -1,0 +1,13 @@
+id: foxglove_visualizer
+name: Foxglove Studio 3D Visualizer Plugin
+category: visualization
+description: Integrates Foxglove Studio WebSocket bridge (port 8765) with high-performance CDR/Protobuf streaming for 3D PointClouds, TF trees, and URDFs.
+foxglove_config:
+  port: 8765
+  protocol: "foxglove-websocket"
+  default_layout: "amr_3d_monitoring"
+  supported_panels:
+    - 3D
+    - Teleop
+    - Diagnostics
+    - Image

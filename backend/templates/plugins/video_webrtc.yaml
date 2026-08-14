@@ -1,0 +1,13 @@
+id: video_webrtc
+name: WebRTC Video Stream Plugin
+category: video
+description: Sub-200ms ultra-low latency WebRTC camera streaming feed for real-time video teleoperation and monitoring.
+webrtc_config:
+  signaling_url: "ws://{robot_ip}:8554/webrtc"
+  sfu_gateway: "janus"
+  ice_servers:
+    - urls: "stun:stun.l.google.com:19302"
+  video_codecs: ["H264", "VP8"]
+  default_stream_topic: "/camera/color/image_raw"
+  resolution: "1280x720"
+  framerate: 30

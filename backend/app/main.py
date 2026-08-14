@@ -15,6 +15,7 @@ from app.db import init_db, get_session
 from app.db.models import Robot, Mission, MapAsset
 from app.services.rosbridge_manager import ROSbridgeManager
 from app.services.telemetry_service import TelemetryService
+from app.services.template_manager import TemplateManager
 from app.db import create_redis_client
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,33 @@ logger = logging.getLogger(__name__)
 # Global service instances
 rosbridge_manager: Optional[ROSbridgeManager] = None
 telemetry_service: Optional[TelemetryService] = None
+template_manager: TemplateManager = TemplateManager()
 redis_client = None
 
+
+class ConnectionManager:
+    """Manages active frontend WebSocket connections for direct broadcasting."""
+    def __init__(self):
+        self.active_connections: set[WebSocket] = set()
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.add(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.discard(websocket)
+
+    async def broadcast(self, message: dict):
+        disconnected = set()
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                disconnected.add(connection)
+        for conn in disconnected:
+            self.active_connections.discard(conn)
+
+connection_manager = ConnectionManager()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,12 +73,32 @@ async def lifespan(app: FastAPI):
     await rosbridge_manager.start()
     await telemetry_service.start()
 
+    # In-memory WebSocket manager for direct frontend broadcasting
+    telemetry_service.register_callback(
+        lambda robot_id, point: connection_manager.broadcast({
+            "type": "telemetry",
+            "data": {
+                "robot_id": robot_id,
+                "telemetry": point,
+            }
+        })
+    )
+
     # Register telemetry handlers
     for topic in settings.ALLOWED_TOPICS:
         rosbridge_manager.register_message_handler(
             topic,
             lambda robot_id, msg, t=topic: telemetry_service.ingest(robot_id, t, msg)
         )
+
+    # Auto-register default robot on startup
+    rosbridge_manager.register_robot(
+        "rosorin-01",
+        "RosOrin-Alpha",
+        "192.168.8.162",
+        9090
+    )
+    asyncio.create_task(rosbridge_manager.connect("rosorin-01"))
 
     logger.info("GCS Backend started successfully")
 
@@ -93,9 +139,19 @@ class RobotRegisterRequest(BaseModel):
     port: int = Field(default=9090)
 
 
+class TemplateRobotRegisterRequest(BaseModel):
+    template_id: str
+    robot_id: str
+    robot_name: str
+    host: str
+    port: int = Field(default=9090)
+    selected_plugins: Optional[list] = None
+
+
 class RobotRegisterResponse(BaseModel):
     robot_id: str
     status: str
+    config: Optional[dict] = None
 
 
 class MissionCreateRequest(BaseModel):
@@ -148,6 +204,59 @@ async def register_robot(request: RobotRegisterRequest):
     return RobotRegisterResponse(
         robot_id=request.robot_id,
         status=conn.status,
+    )
+
+
+@app.get("/api/templates")
+async def list_templates():
+    """List all available robot platform templates and plugins."""
+    return {
+        "platforms": template_manager.list_platform_templates(),
+        "plugins": template_manager.list_plugins(),
+        "baseline": template_manager.get_baseline(),
+    }
+
+
+@app.get("/api/templates/{template_id}")
+async def get_template(template_id: str):
+    """Get full details and resolved specs for a platform template."""
+    tmpl = template_manager.get_platform_template(template_id)
+    if not tmpl:
+        raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+    return tmpl
+
+
+@app.post("/api/robots/register-from-template", response_model=RobotRegisterResponse)
+async def register_robot_from_template(request: TemplateRobotRegisterRequest):
+    """Register a new robot platform instance using a template and selected plugins."""
+    if not rosbridge_manager:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+
+    try:
+        robot_config = template_manager.generate_robot_config(
+            template_id=request.template_id,
+            robot_id=request.robot_id,
+            robot_name=request.robot_name,
+            host=request.host,
+            port=request.port,
+            selected_plugins=request.selected_plugins,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Register and connect to robot
+    conn = rosbridge_manager.register_robot(
+        request.robot_id,
+        request.robot_name,
+        request.host,
+        request.port,
+    )
+    asyncio.create_task(rosbridge_manager.connect(request.robot_id))
+
+    return RobotRegisterResponse(
+        robot_id=request.robot_id,
+        status="ONLINE",
+        config=robot_config,
     )
 
 
@@ -354,7 +463,7 @@ async def set_teleop_mode(robot_id: str, request: TeleopModeRequest):
     if not rosbridge_manager:
         raise HTTPException(status_code=503, detail="Service not initialized")
 
-    conn = rosbridge_manager.active_robots.get(robot_id)
+    conn = rosbridge_manager._get_conn(robot_id)
     if not conn or not conn.is_connected:
         raise HTTPException(status_code=404, detail="Robot not found or not connected")
 
@@ -363,15 +472,99 @@ async def set_teleop_mode(robot_id: str, request: TeleopModeRequest):
 
     # Call /set_teleop_mode ROS service on robot (std_srvs/SetBool: data=True for GCS_REMOTE, data=False for LOCAL)
     res = await rosbridge_manager.call_service(
-        robot_id,
+        conn.robot_id,
         "/set_teleop_mode",
         {"data": True if request.mode == "GCS_REMOTE" else False},
     )
 
     return {
-        "robot_id": robot_id,
+        "robot_id": conn.robot_id,
         "mode": request.mode,
         "success": res.get("success", False) if res else False,
+    }
+
+
+@app.post("/api/launch-foxglove")
+async def launch_foxglove_studio():
+    """Launch native Foxglove Studio desktop application on host workstation."""
+    import subprocess
+    try:
+        foxglove_bin = "/snap/bin/foxglove-studio"
+        if not os.path.exists(foxglove_bin):
+            foxglove_bin = "foxglove-studio"
+        
+        process = subprocess.Popen([foxglove_bin], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return {"status": "success", "pid": process.pid, "message": "Foxglove Studio desktop launched!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to launch Foxglove Studio: {e}")
+
+
+@app.get("/api/foxglove-lidar-layout.json")
+async def get_foxglove_lidar_layout():
+    """Return a minimalist 3D Foxglove layout configured for LiDAR (/scan) and lidar_frame."""
+    return {
+        "configById": {
+            "3D!1": {
+                "cameraState": {
+                    "perspective": False,
+                    "distance": 15,
+                    "phi": 60,
+                    "thetaOffset": 0,
+                    "targetOffset": [0, 0, 0],
+                    "target": [0, 0, 0],
+                    "targetOrientation": [0, 0, 0, 1],
+                    "focalDistance": 1,
+                    "fov": 45,
+                    "near": 0.5,
+                    "far": 5000,
+                },
+                "followMode": "follow-pose",
+                "followTf": "lidar_frame",
+                "scene": {
+                    "transforms": {
+                        "showLabel": True,
+                    }
+                },
+                "transforms": {
+                    "frame_lidar_frame": {
+                        "visible": True,
+                    }
+                },
+                "topics": {
+                    "/scan": {
+                        "visible": True,
+                        "colorField": "intensity",
+                        "colorMode": "colormap",
+                        "colorMap": "turbo",
+                        "pointSize": 4.0,
+                    }
+                },
+                "layers": {
+                    "grid": {
+                        "layerId": "foxglove.Grid",
+                        "size": 20,
+                        "divisions": 20,
+                        "color": "#2a364f",
+                        "position": [0, 0, 0],
+                        "orientation": [0, 0, 0, 1],
+                        "frameId": "lidar_frame",
+                    }
+                },
+                "publish": {
+                    "type": "point",
+                    "poseTopic": "/move_base_simple/goal",
+                    "pointTopic": "/clicked_point",
+                    "poseEstimateTopic": "/initialpose",
+                },
+            }
+        },
+        "globalVariables": {},
+        "userNodes": {},
+        "linkedGlobalVariables": [],
+        "playbackConfig": {
+            "speed": 1
+        },
+        "layout": "3D!1",
     }
 
 
@@ -422,7 +615,7 @@ async def get_mission(mission_id: int):
 @app.websocket("/ws/fleet")
 async def fleet_websocket(websocket: WebSocket):
     """WebSocket endpoint for real-time fleet data to the frontend."""
-    await websocket.accept()
+    await connection_manager.connect(websocket)
 
     try:
         # Send initial robot states
@@ -478,10 +671,29 @@ async def fleet_websocket(websocket: WebSocket):
             except Exception:
                 pass
 
+        async def listen_redis():
+            if not redis_client:
+                return
+            pubsub = redis_client.pubsub()
+            await pubsub.subscribe(settings.REDIS_REALTIME_CHANNEL)
+            try:
+                async for message in pubsub.listen():
+                    if message["type"] == "message":
+                        raw_data = message["data"]
+                        if isinstance(raw_data, bytes):
+                            raw_data = raw_data.decode("utf-8")
+                        await websocket.send_text(raw_data)
+            except Exception:
+                pass
+            finally:
+                await pubsub.unsubscribe(settings.REDIS_REALTIME_CHANNEL)
+
         read_task = asyncio.create_task(read_incoming())
         periodic_task = asyncio.create_task(send_periodic())
+        redis_task = asyncio.create_task(listen_redis())
+
         done, pending = await asyncio.wait(
-            [read_task, periodic_task], return_when=asyncio.FIRST_COMPLETED
+            [read_task, periodic_task, redis_task], return_when=asyncio.FIRST_COMPLETED
         )
         for task in pending:
             task.cancel()
@@ -490,6 +702,8 @@ async def fleet_websocket(websocket: WebSocket):
         logger.info("Frontend WebSocket disconnected")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
+    finally:
+        connection_manager.disconnect(websocket)
 
 
 # ─── Health Check ───

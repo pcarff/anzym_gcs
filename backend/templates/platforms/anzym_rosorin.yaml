@@ -1,0 +1,34 @@
+id: anzym_rosorin
+name: ANZVM RosOrin AMR Platform
+version: "1.0.0"
+category: "differential_drive_amr"
+description: Industrial Autonomous Mobile Robot powered by NVIDIA Jetson Orin with onboard camera, 2D LiDAR, and ROS2 Humble.
+baseline_ref: default_robot
+recommended_plugins:
+  - video_webrtc
+  - foxglove_visualizer
+  - lidar_2d_3d
+  - gamepad_teleop
+capabilities:
+  has_camera: true
+  has_lidar: true
+  has_nav2: true
+  has_foxglove: true
+  drive_type: "differential"
+camera_specs:
+  model: "Intel RealSense D435i / Orin CSI"
+  topics:
+    color: "/camera/color/image_raw"
+    depth: "/camera/depth/image_rect_raw"
+  webrtc_enabled: true
+  webrtc_port: 8554
+default_topics:
+  - topic: "/camera/color/image_raw"
+    type: "sensor_msgs/msg/Image"
+    rate_limit_hz: 30
+  - topic: "/scan"
+    type: "sensor_msgs/msg/LaserScan"
+    rate_limit_hz: 15
+  - topic: "/amcl_pose"
+    type: "geometry_msgs/msg/PoseWithCovarianceStamped"
+    rate_limit_hz: 10

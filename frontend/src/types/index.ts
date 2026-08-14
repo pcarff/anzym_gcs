@@ -6,7 +6,7 @@ export interface DiagnosticStatus {
   level: number;
   name: string;
   message: string;
-  values: { key: string; value: string }[];
+  values?: { key: string; value: string }[];
 }
 
 export interface RobotState {
@@ -19,6 +19,17 @@ export interface RobotState {
   diagnostics: DiagnosticStatus[];
   is_connected: boolean;
   teleopMode?: 'LOCAL' | 'GCS_REMOTE';
+  platform_type?: string;
+  template_id?: string;
+  enabled_plugins?: string[];
+  scan?: {
+    ranges: number[];
+    angle_min: number;
+    angle_max: number;
+    angle_increment: number;
+    range_min?: number;
+    range_max?: number;
+  };
 }
 
 export interface Mission {

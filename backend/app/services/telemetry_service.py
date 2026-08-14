@@ -5,7 +5,7 @@ import json
 import logging
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 
 import redis.asyncio as aioredis
 
@@ -50,6 +50,11 @@ class TelemetryService:
         self._batches: Dict[str, TelemetryBatch] = {}
         self._task: Optional[asyncio.Task] = None
         self._running = False
+        self._callbacks: List[Callable] = []
+
+    def register_callback(self, callback: Callable):
+        """Register a callback for real-time telemetry points."""
+        self._callbacks.append(callback)
 
     async def start(self):
         """Start the periodic flush task."""
@@ -84,6 +89,15 @@ class TelemetryService:
 
         # Publish to Redis for real-time frontend updates
         await self._publish_to_redis(robot_id, telemetry_point)
+
+        # Trigger registered in-memory callbacks (direct WebSocket broadcast)
+        for cb in self._callbacks:
+            try:
+                res = cb(robot_id, telemetry_point)
+                if asyncio.iscoroutine(res) or hasattr(res, "__await__"):
+                    await res
+            except Exception as e:
+                logger.error(f"Error in telemetry callback: {e}")
 
     def _parse_message(self, robot_id: str, topic: str, message: dict) -> Optional[dict]:
         """Parse a raw rosbridge message into a telemetry point."""
@@ -131,12 +145,36 @@ class TelemetryService:
                 },
             }
 
-        elif topic == "/tf":
+        elif topic in ("/tf", "/tf_static"):
             return {
                 "robot_id": robot_id,
                 "timestamp": timestamp,
-                "type": "pose",
-                "transform": msg_data,
+                "type": "tf",
+                "topic": topic,
+                "transforms": msg_data.get("transforms", []),
+                "data": msg_data,
+            }
+
+        elif topic == "/odom":
+            pose_obj = msg_data.get("pose", {}).get("pose", {})
+            return {
+                "robot_id": robot_id,
+                "timestamp": timestamp,
+                "type": "odom",
+                "topic": "/odom",
+                "position": pose_obj.get("position", {}),
+                "orientation": pose_obj.get("orientation", {}),
+                "data": msg_data,
+            }
+
+        elif topic == "/teleop_mode_status":
+            return {
+                "robot_id": robot_id,
+                "timestamp": timestamp,
+                "type": "teleop_mode_status",
+                "topic": "/teleop_mode_status",
+                "mode": msg_data.get("data", "LOCAL"),
+                "data": msg_data,
             }
 
         elif topic in ("/nav_msgs/Path", "/amcl_pose"):
@@ -145,15 +183,34 @@ class TelemetryService:
                 "robot_id": robot_id,
                 "timestamp": timestamp,
                 "type": "pose",
+                "topic": topic,
                 "position": pose.get("position", {}),
                 "orientation": pose.get("orientation", {}),
+                "data": msg_data,
             }
 
-        # Generic telemetry
+        elif topic == "/scan":
+            return {
+                "robot_id": robot_id,
+                "timestamp": timestamp,
+                "type": "scan",
+                "topic": "/scan",
+                "scan": {
+                    "ranges": msg_data.get("ranges", []),
+                    "angle_min": msg_data.get("angle_min", -3.14159),
+                    "angle_max": msg_data.get("angle_max", 3.14159),
+                    "angle_increment": msg_data.get("angle_increment", 0.01745),
+                    "range_min": msg_data.get("range_min", 0.1),
+                    "range_max": msg_data.get("range_max", 30.0),
+                },
+                "data": msg_data,
+            }
+
+        # Generic telemetry for all other topics
         return {
             "robot_id": robot_id,
             "timestamp": timestamp,
-            "type": "generic",
+            "type": topic.lstrip("/").replace("/", "_"),
             "topic": topic,
             "data": msg_data,
         }

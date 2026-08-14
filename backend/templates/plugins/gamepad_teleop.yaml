@@ -1,0 +1,10 @@
+id: gamepad_teleop
+name: Gamepad & Keyboard Remote Teleop Plugin
+category: teleop
+description: Enables direct web-gamepad API joystick teleoperation, mapping joy inputs to geometry_msgs/Twist on /cmd_vel with safety limits.
+teleop_config:
+  cmd_vel_topic: "/cmd_vel"
+  max_linear_velocity: 1.5
+  max_angular_velocity: 1.2
+  deadzone: 0.1
+  deadman_button: 5 # Right Bumper

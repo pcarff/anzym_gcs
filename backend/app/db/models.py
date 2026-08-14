@@ -20,6 +20,10 @@ class Robot(Base):
     status = Column(String(20), default="OFFLINE")  # ONLINE, OFFLINE, BUSY, ERROR
     last_seen_at = Column(DateTime(timezone=True), nullable=True)
     current_mission_id = Column(UUID(as_uuid=True), ForeignKey("missions.id"), nullable=True)
+    platform_type = Column(String(50), nullable=True, default="anzym_rosorin")
+    template_id = Column(String(50), nullable=True, default="anzym_rosorin")
+    enabled_plugins = Column(JSON, nullable=True, default=list)
+    capabilities = Column(JSON, nullable=True, default=dict)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc))

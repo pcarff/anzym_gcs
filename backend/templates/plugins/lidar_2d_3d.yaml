@@ -1,0 +1,10 @@
+id: lidar_2d_3d
+name: 2D/3D LiDAR & Costmap Mapping Plugin
+category: mapping
+description: Ingests laser scan topics (/scan), global/local costmaps, and 3D point cloud topics for dynamic occupancy mapping.
+lidar_config:
+  scan_topic: "/scan"
+  pointcloud_topic: "/points2"
+  global_costmap: "/global_costmap/costmap"
+  local_costmap: "/local_costmap/costmap"
+  max_range_meters: 30.0

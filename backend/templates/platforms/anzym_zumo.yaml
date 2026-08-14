@@ -1,0 +1,29 @@
+id: anzym_zumo
+name: ANZVM Zumo Micro AMR Platform
+version: "1.0.0"
+category: "tracked_micro_amr"
+description: Compact tracked/skid-steer micro robot for agile indoor exploration and telemetry collection.
+baseline_ref: default_robot
+recommended_plugins:
+  - gamepad_teleop
+  - video_webrtc
+  - foxglove_visualizer
+capabilities:
+  has_camera: true
+  has_lidar: false
+  has_nav2: false
+  has_foxglove: true
+  drive_type: "tracked_skid_steer"
+camera_specs:
+  model: "Pi Camera Module / USB Cam"
+  topics:
+    color: "/zumo/camera/image_raw"
+  webrtc_enabled: true
+  webrtc_port: 8554
+default_topics:
+  - topic: "/zumo/camera/image_raw"
+    type: "sensor_msgs/msg/Image"
+    rate_limit_hz: 20
+  - topic: "/zumo/imu"
+    type: "sensor_msgs/msg/Imu"
+    rate_limit_hz: 20

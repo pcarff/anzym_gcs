@@ -18,6 +18,7 @@ interface FleetStore extends FleetState {
   updateRobotPosition: (robotId: string, x: number, y: number, theta?: number) => void;
   updateRobotBattery: (robotId: string, battery: number) => void;
   updateRobotDiagnostics: (robotId: string, diagnostics: any[]) => void;
+  updateRobotScan: (robotId: string, scan: any) => void;
 
   setSelectedRobotId: (robotId?: string) => void;
   setActiveMissionId: (missionId?: number) => void;
@@ -31,17 +32,25 @@ interface FleetStore extends FleetState {
   setTeleopMode: (robotId: string, mode: 'LOCAL' | 'GCS_REMOTE') => Promise<void>;
   sendTwistCommand: (robotId: string, linearX: number, linearY: number, angularZ: number) => void;
 
+  subscribeTelemetry: (cb: (msg: any) => void) => () => void;
+
   // WebSocket connection
   connectWebSocket: (url: string) => void;
   disconnectWebSocket: () => void;
   isConnected: boolean;
 }
 
+const telemetryListeners = new Set<(msg: any) => void>();
+
 export const useFleetStore = create<FleetStore>((set, get) => ({
   // Initial state
   robots: {},
   activeMissionId: undefined,
   selectedRobotId: undefined,
+  subscribeTelemetry: (cb) => {
+    telemetryListeners.add(cb);
+    return () => telemetryListeners.delete(cb);
+  },
   missions: [],
   selectedMapType: '2D',
   isConnected: false,
@@ -117,6 +126,31 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
       },
     })),
 
+  updateRobotScan: (robotId: string, scan: any) =>
+    set((state) => {
+      const targetId = state.robots[robotId]
+        ? robotId
+        : Object.keys(state.robots).find(
+            (id) =>
+              id.toLowerCase() === robotId.toLowerCase() ||
+              state.robots[id].name === robotId ||
+              state.robots[id].name.toLowerCase().includes('orin')
+          ) || Object.keys(state.robots)[0];
+
+      if (!targetId || !state.robots[targetId]) return state;
+
+      return {
+        robots: {
+          ...state.robots,
+          [targetId]: {
+            ...state.robots[targetId],
+            scan,
+            lastSeen: new Date(),
+          },
+        },
+      };
+    }),
+
   // Selection actions
   setSelectedRobotId: (selectedRobotId) => set({ selectedRobotId }),
   setActiveMissionId: (activeMissionId) => set({ activeMissionId }),
@@ -150,7 +184,7 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
     }));
 
     try {
-      const response = await fetch(`/api/robots/${robotId}/teleop_mode`, {
+      const response = await fetch(`http://localhost:8000/api/robots/${robotId}/teleop_mode`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode }),
@@ -182,6 +216,7 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
     const connect = () => {
       try {
         globalWs = new WebSocket(url);
+        (window as any).__gcs_ws = globalWs;
 
         globalWs.onopen = () => {
           console.log('[FleetStore] WebSocket connected');
@@ -243,6 +278,14 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
 
 /** Handle incoming WebSocket messages */
 function handleWebSocketMessage(message: any, store: FleetStore) {
+  telemetryListeners.forEach((cb) => {
+    try {
+      cb(message);
+    } catch (err) {
+      // Ignore listener error
+    }
+  });
+
   switch (message.type) {
     case 'robot_state': {
       const data = message.data;
@@ -267,13 +310,14 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
 
       robots.forEach((r: any) => {
         if (updatedRobots[r.id]) {
+          const currentScan = updatedRobots[r.id].scan;
           updatedRobots[r.id] = {
             ...updatedRobots[r.id],
             status: r.status || updatedRobots[r.id].status,
             is_connected: r.is_connected ?? updatedRobots[r.id].is_connected,
             teleopMode: r.teleop_mode || updatedRobots[r.id].teleopMode || 'LOCAL',
-            battery: r.battery !== undefined ? r.battery : updatedRobots[r.id].battery,
-            lastSeen: new Date(),
+            battery: r.battery ?? updatedRobots[r.id].battery,
+            scan: currentScan,
           };
         }
       });
@@ -298,6 +342,9 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
       }
       if (telemetry.diagnostics) {
         store.updateRobotDiagnostics(robot_id, telemetry.diagnostics);
+      }
+      if (telemetry.scan) {
+        store.updateRobotScan(robot_id, telemetry.scan);
       }
       break;
     }

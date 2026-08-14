@@ -1,0 +1,32 @@
+id: baseline_default
+name: Default Baseline Requirements
+description: Mandatory topics, health heartbeats, safety protocols, and rosbridge configurations required for all GCS-integrated robots.
+rosbridge:
+  websocket_port: 9090
+  foxglove_port: 8765
+  reconnect_interval_sec: 5
+heartbeat:
+  interval_sec: 2
+  timeout_sec: 10
+safety:
+  e_stop_service: "/emergency_stop"
+  emergency_cmd_vel_topic: "/cmd_vel"
+baseline_topics:
+  - topic: "/battery_state"
+    type: "sensor_msgs/msg/BatteryState"
+    rate_limit_hz: 5
+  - topic: "/diagnostics"
+    type: "diagnostic_msgs/msg/DiagnosticArray"
+    rate_limit_hz: 5
+  - topic: "/tf"
+    type: "tf2_msgs/msg/TFMessage"
+    rate_limit_hz: 10
+  - topic: "/tf_static"
+    type: "tf2_msgs/msg/TFMessage"
+    rate_limit_hz: 1
+  - topic: "/odom"
+    type: "nav_msgs/msg/Odometry"
+    rate_limit_hz: 10
+  - topic: "/cmd_vel"
+    type: "geometry_msgs/msg/Twist"
+    rate_limit_hz: 20
