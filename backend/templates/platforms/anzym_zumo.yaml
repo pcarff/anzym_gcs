@@ -1,5 +1,5 @@
 id: anzym_zumo
-name: ANZVM Zumo Micro AMR Platform
+name: ANZYM Zumo Micro AMR Platform
 version: "1.0.0"
 category: "tracked_micro_amr"
 description: Compact tracked/skid-steer micro robot for agile indoor exploration and telemetry collection.

@@ -1,5 +1,5 @@
 id: anzym_rosorin
-name: ANZVM RosOrin AMR Platform
+name: ANZYM RosOrin AMR Platform
 version: "1.0.0"
 category: "differential_drive_amr"
 description: Industrial Autonomous Mobile Robot powered by NVIDIA Jetson Orin with onboard camera, 2D LiDAR, and ROS2 Humble.

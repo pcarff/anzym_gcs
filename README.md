@@ -1,8 +1,8 @@
-# ANZVM Ground Control System (GCS)
+# ANZYM Ground Control System (GCS)
 
 An enterprise multi-robot fleet management, spatial mapping, teleoperation, and diagnostics dashboard built for ROS2 mobile robots.
 
-![ANZVM GCS Banner](docs/architecture.md)
+![ANZYM GCS Banner](docs/architecture.md)
 
 ---
 

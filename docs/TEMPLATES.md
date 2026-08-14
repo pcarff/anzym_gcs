@@ -1,6 +1,6 @@
 # Robot Platform Templates & Plugin Architecture
 
-The **ANZVM Ground Control System (GCS)** uses a modular, template-driven architecture to configure, register, and manage diverse ROS2 mobile robot platforms.
+The **ANZYM Ground Control System (GCS)** uses a modular, template-driven architecture to configure, register, and manage diverse ROS2 mobile robot platforms.
 
 ---
 
@@ -41,11 +41,11 @@ graph TD
 
 ## 3. Platform Template Specification (`.yaml`)
 
-Below is the standard specification for an ANZVM robot platform template:
+Below is the standard specification for an ANZYM robot platform template:
 
 ```yaml
 id: anzym_rosorin
-name: ANZVM RosOrin AMR Platform
+name: ANZYM RosOrin AMR Platform
 version: "1.0.0"
 category: "differential_drive_amr"
 description: Industrial Autonomous Mobile Robot powered by NVIDIA Jetson Orin with onboard camera, 2D LiDAR, and ROS2.
@@ -112,7 +112,7 @@ GET /api/templates
   "platforms": [
     {
       "id": "anzym_rosorin",
-      "name": "ANZVM RosOrin AMR Platform",
+      "name": "ANZYM RosOrin AMR Platform",
       "recommended_plugins": ["video_webrtc", "foxglove_visualizer", "lidar_2d_3d", "gamepad_teleop"]
     }
   ],
