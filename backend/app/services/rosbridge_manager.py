@@ -238,21 +238,19 @@ class ROSbridgeManager:
                 timeout = timedelta(seconds=settings.HEARTBEAT_TIMEOUT_SECONDS)
 
                 for robot_id, conn in self._robots.items():
-                    if conn.is_connected and conn.websocket:
-                        # Check WebSocket state in websockets v17+
-                        ws_state = getattr(conn.websocket, "state", None)
-                        is_open = (
-                            ws_state == websockets.protocol.State.OPEN
+                    if conn.is_connected:
+                        ws_state = getattr(conn.websocket, "state", None) if conn.websocket else None
+                        is_closed = (
+                            ws_state == websockets.protocol.State.CLOSED
                             if ws_state is not None
-                            else getattr(conn.websocket, "open", False)
+                            else not getattr(conn.websocket, "open", True)
                         )
-                        if is_open:
-                            conn.last_heartbeat = now
-                            conn.status = "ONLINE"
-                        elif conn.last_heartbeat and (now - conn.last_heartbeat > timeout):
+
+                        # Mark offline if socket closed or heartbeat timed out (>10s)
+                        if is_closed or (conn.last_heartbeat and (now - conn.last_heartbeat > timeout)):
                             logger.warning(
-                                f"Robot {conn.robot_name} connection lost "
-                                f"(last: {conn.last_heartbeat})"
+                                f"Robot {conn.robot_name} connection lost or timed out "
+                                f"(last heartbeat: {conn.last_heartbeat})"
                             )
                             conn.is_connected = False
                             conn.status = "OFFLINE"

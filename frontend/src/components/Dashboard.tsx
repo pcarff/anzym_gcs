@@ -244,13 +244,20 @@ export function Dashboard() {
                     </span>
                     <button
                       onClick={toggleTeleopMode}
+                      disabled={selectedRobot.status !== 'ONLINE' || !selectedRobot.is_connected}
                       className={`px-3 py-1 text-xs rounded font-bold transition-colors ${
-                        selectedRobot.teleopMode === 'GCS_REMOTE'
+                        selectedRobot.status !== 'ONLINE' || !selectedRobot.is_connected
+                          ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                          : selectedRobot.teleopMode === 'GCS_REMOTE'
                           ? 'bg-purple-600 hover:bg-purple-700 text-white'
                           : 'bg-gray-600 hover:bg-gray-500 text-gray-200'
                       }`}
                     >
-                      {selectedRobot.teleopMode === 'GCS_REMOTE' ? 'Switch to Local' : 'Switch to GCS Joystick'}
+                      {selectedRobot.status !== 'ONLINE' || !selectedRobot.is_connected
+                        ? 'Robot Offline'
+                        : selectedRobot.teleopMode === 'GCS_REMOTE'
+                        ? 'Switch to Local'
+                        : 'Switch to GCS Joystick'}
                     </button>
                   </div>
 
