@@ -53,33 +53,27 @@ stop_services() {
     if [ -f "${BACKEND_PID_FILE}" ]; then
         BACKEND_PID=$(cat "${BACKEND_PID_FILE}")
         if kill -0 "${BACKEND_PID}" 2>/dev/null; then
-            kill "${BACKEND_PID}" 2>/dev/null
-            # Also kill child processes (uvicorn workers)
+            kill "${BACKEND_PID}" 2>/dev/null || true
             pkill -P "${BACKEND_PID}" 2>/dev/null || true
             success "Backend stopped (PID ${BACKEND_PID})"
-        else
-            warn "Backend PID ${BACKEND_PID} not running"
         fi
         rm -f "${BACKEND_PID_FILE}"
-    else
-        # Fallback: try to find and kill uvicorn
-        pkill -f "uvicorn app.main:app" 2>/dev/null && success "Backend stopped (pkill)" || info "Backend not running"
     fi
+    pkill -f "uvicorn app.main:app" 2>/dev/null || true
+    fuser -k 8000/tcp 2>/dev/null || true
 
     # Stop frontend
     if [ -f "${FRONTEND_PID_FILE}" ]; then
         FRONTEND_PID=$(cat "${FRONTEND_PID_FILE}")
         if kill -0 "${FRONTEND_PID}" 2>/dev/null; then
-            kill "${FRONTEND_PID}" 2>/dev/null
+            kill "${FRONTEND_PID}" 2>/dev/null || true
             pkill -P "${FRONTEND_PID}" 2>/dev/null || true
             success "Frontend stopped (PID ${FRONTEND_PID})"
-        else
-            warn "Frontend PID ${FRONTEND_PID} not running"
         fi
         rm -f "${FRONTEND_PID_FILE}"
-    else
-        pkill -f "vite" 2>/dev/null && success "Frontend stopped (pkill)" || info "Frontend not running"
     fi
+    pkill -f "vite" 2>/dev/null || true
+    fuser -k 5173/tcp 2>/dev/null || true
 
     # Stop Docker infrastructure
     step "Stopping Docker infrastructure..."
@@ -203,20 +197,21 @@ start_services() {
         kill "${OLD_PID}" 2>/dev/null && pkill -P "${OLD_PID}" 2>/dev/null || true
         rm -f "${BACKEND_PID_FILE}"
     fi
+    pkill -f "uvicorn app.main:app" 2>/dev/null || true
+    fuser -k 8000/tcp 2>/dev/null || true
 
     cd "${BACKEND_DIR}"
     source "${BACKEND_VENV}/bin/activate"
 
-    # Launch uvicorn in background with localhost-pointed env vars
-    REDIS_HOST=localhost \
-    POSTGRES_HOST=localhost \
-    INFLUXDB_URL=http://localhost:8086 \
-    MINIO_ENDPOINT=localhost:9000 \
-    nohup uvicorn app.main:app \
-        --host 0.0.0.0 \
-        --port 8000 \
-        --reload \
-        > "${SCRIPT_DIR}/logs/backend.log" 2>&1 &
+    # Launch uvicorn fully detached
+    setsid nohup bash -c "
+        source '${BACKEND_VENV}/bin/activate'
+        export REDIS_HOST=localhost
+        export POSTGRES_HOST=localhost
+        export INFLUXDB_URL=http://localhost:8086
+        export MINIO_ENDPOINT=localhost:9000
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    " > "${SCRIPT_DIR}/logs/backend.log" 2>&1 &
     echo $! > "${BACKEND_PID_FILE}"
 
     # Wait for backend to respond
@@ -246,6 +241,8 @@ start_services() {
         kill "${OLD_PID}" 2>/dev/null && pkill -P "${OLD_PID}" 2>/dev/null || true
         rm -f "${FRONTEND_PID_FILE}"
     fi
+    pkill -f "vite" 2>/dev/null || true
+    fuser -k 5173/tcp 2>/dev/null || true
 
     cd "${FRONTEND_DIR}"
 
@@ -255,7 +252,7 @@ start_services() {
         npm install --silent
     fi
 
-    nohup npm run dev > "${SCRIPT_DIR}/logs/frontend.log" 2>&1 &
+    setsid nohup npm run dev > "${SCRIPT_DIR}/logs/frontend.log" 2>&1 &
     echo $! > "${FRONTEND_PID_FILE}"
 
     # Wait for vite to be ready
