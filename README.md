@@ -51,11 +51,21 @@ Open your browser and navigate to:
 - **FastAPI Backend API**: [http://localhost:8000](http://localhost:8000)
 - **FastAPI Interactive Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### 5. Check System Logs
+### 5. Check System Logs & Status
 ```bash
-# Backend logs appear in the terminal running uvicorn
+# Check service status
+./start_gcs.sh --status
+
+# Backend logs appear in logs/backend.log
+# Frontend logs appear in logs/frontend.log
 # Infrastructure logs:
 docker compose logs -f redis postgres
+```
+
+### 6. Stop / Shutdown GCS
+```bash
+./shutdown_gcs.sh
+# or: ./stop_gcs.sh
 ```
 
 > **Note:** You can also run the full stack in Docker with `docker compose up --build -d`, but the backend container must be able to reach the robot's IP (e.g., `192.168.8.162`) which requires `network_mode: host` or custom Docker networking.
