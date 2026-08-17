@@ -30,10 +30,6 @@ graph TD
             INFLUX["InfluxDB<br/>(Time-series Telemetry)"]
             MINIO["MinIO (S3)<br/>(Maps + Assets)"]
         end
-
-        subgraph "Media SFU"
-            JANUS["Janus Gateway<br/>(WebRTC SFU)"]
-        end
     end
 
     subgraph "Frontend (React + Vite)"
@@ -42,17 +38,18 @@ graph TD
         DIAG["Diagnostics Panel"]
         MISSION["Mission Control"]
         WS_CLIENT["WebSocket Client<br/>(Auto-reconnect)"]
+        VIDEO["MJPEG Video Player<br/>(web_video_server)"]
     end
 
     %% Data Flow: Robot -> Backend
-    R1 -->|"/battery_state, /diagnostics, /tf"| WiFi
-    R2 -->|"/battery_state, /diagnostics, /tf"| WiFi
-    R3 -->|"/battery_state, /diagnostics, /tf"| WiFi
+    R1 -->|"/battery_state, /vehicle/baseline_status, /scan, /tf"| WiFi
+    R2 -->|"/battery_state, /vehicle/baseline_status, /scan, /tf"| WiFi
+    R3 -->|"/battery_state, /vehicle/baseline_status, /scan, /tf"| WiFi
     WiFi -->|"WebSocket (rosbridge protocol)"| WS
 
     WS -->|"Raw JSON messages"| TELEM
     TELEM -->|"Parsed telemetry"| INFLUX
-    TELEM -->|"Real-time state"| REDIS
+    TELEM -->|"Real-time state (per-robot + gcs:realtime)"| REDIS
     HB -->|"OFFLINE status"| REDIS
     WS -->|"Heartbeat check"| HB
 
@@ -77,10 +74,9 @@ graph TD
     MISSION -->|"POST /api/missions"| API
     MAP -->|"POST /api/robots/{id}/goal"| API
 
-    %% Video via WebRTC
-    R1 -->|"WebRTC (RTSP/WebRTC src)"| JANUS
-    R2 -->|"WebRTC (RTSP/WebRTC src)"| JANUS
-    JANUS -->|"WebRTC stream"| DASH
+    %% Video via MJPEG (direct robot -> frontend)
+    R1 -->|"MJPEG HTTP (web_video_server:8080)"| VIDEO
+    R2 -->|"MJPEG HTTP (web_video_server:8080)"| VIDEO
 
     %% Map storage
     MAP -->|"GET map S3 URL"| API
@@ -280,6 +276,7 @@ export interface RobotState {
   diagnostics: DiagnosticStatus[];
   cpuLoad?: number;
   memoryUsage?: number;
+  host?: string;  // Robot's LAN IP for direct MJPEG video access
 }
 
 export interface Mission {
@@ -381,6 +378,11 @@ allowed_topics:
     type: "std_msgs/msg/Float64"
     rate_limit: 5
 
+  # Vehicle telemetry (custom gcs_interfaces)
+  - topic: "/vehicle/baseline_status"
+    type: "gcs_interfaces/msg/VehicleBaselineStatus"
+    rate_limit: 1
+
 allowed_services:
   - service: "/std_srvs/SetBool"
     type: "std_srvs/srv/SetBool"
@@ -401,6 +403,17 @@ blocked_patterns:
   - "*compressed*"
   - "*theora*"
 
+# Per-topic throttle rates for rosbridge subscriptions (milliseconds).
+# 0 = no throttle. High-frequency topics should be throttled to prevent
+# WebSocket flooding and backpressure.
+throttle_rates:
+  "/scan": 200        # LiDAR: cap at ~5 Hz
+  "/tf": 200          # TF: cap at ~5 Hz
+  "/odom": 100        # Odometry: cap at ~10 Hz
+  "/tf_static": 0     # Static transforms: every message
+  "/battery_state": 0 # Battery: every message
+  "/vehicle/baseline_status": 0  # Custom telemetry: every message
+
 rosbridge_config:
   max_message_size: 1048576  # 1 MB
   frame_timeout: 0.5
@@ -416,12 +429,12 @@ rosbridge_config:
     "host": "0.0.0.0",
     "port": 9090,
     "max_message_size": 1048576,
-    "delay_between_messages": 0,
-    "fragment_timeout": 30
+    "delay_between_messages": 0
   },
   "topics": {
     "subscribe": [
       "/battery_state",
+      "/vehicle/baseline_status",
       "/diagnostics",
       "/tf",
       "/nav_msgs/Path",
@@ -432,6 +445,7 @@ rosbridge_config:
     ],
     "publish": [
       "/cmd_vel",
+      "/gcs/cmd_vel",
       "/geometry_msgs/PoseStamped",
       "/nav_msgs/Path"
     ],

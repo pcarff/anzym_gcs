@@ -299,6 +299,7 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
         diagnostics: data.diagnostics ?? [],
         is_connected: data.is_connected ?? false,
         teleopMode: data.teleop_mode || 'LOCAL',
+        host: data.host,
       };
       store.addRobot(robot);
       break;
@@ -317,6 +318,7 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
             is_connected: r.is_connected ?? updatedRobots[r.id].is_connected,
             teleopMode: r.teleop_mode || updatedRobots[r.id].teleopMode || 'LOCAL',
             battery: r.battery ?? updatedRobots[r.id].battery,
+            host: r.host || updatedRobots[r.id].host,
             scan: currentScan,
           };
         }

@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+import math
+import os
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -358,6 +360,7 @@ async def start_mission(mission_id: int):
 
     # Send first waypoint as a navigation goal
     first_goal = mission.waypoints[0]
+    theta = first_goal.get("theta", 0.0)
     goal_msg = {
         "op": "publish",
         "topic": "/goal_pose",
@@ -372,8 +375,8 @@ async def start_mission(mission_id: int):
                 "orientation": {
                     "x": 0.0,
                     "y": 0.0,
-                    "z": first_goal.get("theta", 0.0),
-                    "w": 1.0,
+                    "z": math.sin(theta / 2.0),
+                    "w": math.cos(theta / 2.0),
                 },
             },
         },
@@ -410,8 +413,8 @@ async def send_goal(robot_id: str, request: GoalRequest):
                 "orientation": {
                     "x": 0.0,
                     "y": 0.0,
-                    "z": 0.0,
-                    "w": 1.0,
+                    "z": math.sin(request.theta / 2.0),
+                    "w": math.cos(request.theta / 2.0),
                 },
             },
         },
@@ -630,6 +633,7 @@ async def fleet_websocket(websocket: WebSocket):
                         "is_connected": conn.is_connected,
                         "battery": conn.battery,
                         "teleop_mode": conn.teleop_mode,
+                        "host": conn.host,
                     },
                 })
 
@@ -662,6 +666,7 @@ async def fleet_websocket(websocket: WebSocket):
                                 "is_connected": conn.is_connected,
                                 "battery": conn.battery,
                                 "teleop_mode": conn.teleop_mode,
+                                "host": conn.host,
                             })
 
                         await websocket.send_json({

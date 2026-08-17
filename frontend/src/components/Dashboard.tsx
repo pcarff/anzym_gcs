@@ -271,6 +271,7 @@ export function Dashboard() {
             <WebRTCPlayer
               robotId={selectedRobot?.id}
               robotName={selectedRobot?.name}
+              robotHost={selectedRobot?.host}
               platformType={selectedRobot?.platform_type || 'anzym_rosorin'}
               isRobotOnline={Boolean(selectedRobot && selectedRobot.status === 'ONLINE')}
               topic={

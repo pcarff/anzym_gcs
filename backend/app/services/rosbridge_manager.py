@@ -157,12 +157,15 @@ class ROSbridgeManager:
             logger.error(f"Failed to advertise /gcs/cmd_vel: {e}")
 
         for topic in settings.ALLOWED_TOPICS:
+            throttle_rate = 0
+            if hasattr(settings, "TOPIC_THROTTLE_RATES"):
+                throttle_rate = settings.TOPIC_THROTTLE_RATES.get(topic, 0)
+
             msg = {
                 "op": "subscribe",
                 "id": f"sub_{topic}",
                 "topic": topic,
-                "throttle_rate": 0,
-                "fragment_size": 10000,
+                "throttle_rate": throttle_rate,
                 "queue_length": 10,
             }
             if hasattr(settings, "TOPIC_TYPES") and topic in settings.TOPIC_TYPES:
@@ -171,7 +174,7 @@ class ROSbridgeManager:
             try:
                 await conn.websocket.send(json.dumps(msg))
                 conn.subscribers.append(topic)
-                logger.debug(f"Subscribed to {topic} (type: {msg.get('type', 'auto')}) for robot {conn.robot_name}")
+                logger.debug(f"Subscribed to {topic} (type: {msg.get('type', 'auto')}, throttle: {throttle_rate}ms) for robot {conn.robot_name}")
             except Exception as e:
                 logger.error(f"Failed to subscribe to {topic}: {e}")
 

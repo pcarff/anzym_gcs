@@ -31,9 +31,8 @@ class TelemetryBatch:
     def is_ready(self) -> bool:
         return len(self._batch) >= self.max_size
 
-    @property
     def is_timeout(self, now: float) -> bool:
-        return (now - self._last_flush) >= self.flush_interval and self._batch
+        return (now - self._last_flush) >= self.flush_interval and len(self._batch) > 0
 
     def flush(self) -> List[dict]:
         batch = self._batch.copy()
@@ -206,6 +205,38 @@ class TelemetryService:
                 "data": msg_data,
             }
 
+        elif topic == "/vehicle/baseline_status":
+            # Custom gcs_interfaces/msg/VehicleBaselineStatus from robot TelemetryPublisher
+            battery_data = msg_data.get("battery", {})
+            network_data = msg_data.get("network", {})
+            voltage = battery_data.get("voltage", 0.0)
+            remaining = battery_data.get("remaining_percent", 0.0)
+            return {
+                "robot_id": robot_id,
+                "timestamp": timestamp,
+                "type": "baseline_status",
+                "topic": "/vehicle/baseline_status",
+                "battery": round(remaining, 1),
+                "value": round(remaining, 1),
+                "voltage": round(voltage, 2),
+                "current": battery_data.get("current", 0.0),
+                "cell_temperature": battery_data.get("cell_temperature", 0.0),
+                "health_flags": battery_data.get("health_flags", 0),
+                "network": {
+                    "rssi": network_data.get("rssi", 0),
+                    "packet_loss_rate": network_data.get("packet_loss_rate", 0.0),
+                    "bytes_sent": network_data.get("bytes_sent", 0),
+                    "bytes_received": network_data.get("bytes_received", 0),
+                    "jitter": network_data.get("jitter", 0.0),
+                },
+                "drone_id": msg_data.get("drone_id", 0),
+                "vehicle_type": msg_data.get("vehicle_type", "unknown"),
+                "flight_mode": msg_data.get("flight_mode", 0),
+                "safety_flags": msg_data.get("safety_flags", 0),
+                "rtk_locked": msg_data.get("rtk_locked", False),
+                "data": msg_data,
+            }
+
         # Generic telemetry for all other topics
         return {
             "robot_id": robot_id,
@@ -216,11 +247,13 @@ class TelemetryService:
         }
 
     async def _publish_to_redis(self, robot_id: str, telemetry: dict):
-        """Publish telemetry to Redis channel for real-time updates."""
-        channel = f"robot:{robot_id}:telemetry"
+        """Publish telemetry to Redis channels for real-time updates."""
         payload = json.dumps(telemetry)
         try:
-            await self._redis.publish(channel, payload)
+            # Per-robot channel for targeted subscriptions
+            await self._redis.publish(f"robot:{robot_id}:telemetry", payload)
+            # Global channel so the WebSocket fleet listener receives all telemetry
+            await self._redis.publish(settings.REDIS_REALTIME_CHANNEL, payload)
             # Also keep last value
             await self._redis.set(
                 f"robot:{robot_id}:last_telemetry",

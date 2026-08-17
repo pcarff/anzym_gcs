@@ -72,11 +72,16 @@ camera_specs:
   topics:
     color: "/camera/color/image_raw"
     depth: "/camera/depth/image_rect_raw"
-  webrtc_enabled: true
-  webrtc_port: 8554
+  # Video is served via MJPEG from the robot's web_video_server (port 8080).
+  # The frontend fetches streams directly from http://<robot_host>:8080/stream.
+  video_port: 8080
+  video_method: "mjpeg"  # web_video_server MJPEG over HTTP
 
 # Default ROS2 topics monitored by GCS
 default_topics:
+  - topic: "/vehicle/baseline_status"
+    type: "gcs_interfaces/msg/VehicleBaselineStatus"
+    rate_limit_hz: 1
   - topic: "/camera/color/image_raw"
     type: "sensor_msgs/msg/Image"
     rate_limit_hz: 30

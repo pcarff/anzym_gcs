@@ -12,6 +12,16 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+
+    # Aliases used by main.py entrypoint
+    @property
+    def BACKEND_HOST(self) -> str:
+        return self.HOST
+
+    @property
+    def BACKEND_PORT(self) -> int:
+        return self.PORT
+
     ALLOWED_ORIGINS: List[str] = ["*"]
 
     # ROSbridge
@@ -79,6 +89,7 @@ class Settings(BaseSettings):
         "/cmd_vel",
         "/gcs/cmd_vel",
         "/odom",
+        "/vehicle/baseline_status",
     ]
 
     TOPIC_TYPES: dict = {
@@ -89,6 +100,21 @@ class Settings(BaseSettings):
         "/odom": "nav_msgs/msg/Odometry",
         "/cmd_vel": "geometry_msgs/msg/Twist",
         "/gcs/cmd_vel": "geometry_msgs/msg/Twist",
+        "/vehicle/baseline_status": "gcs_interfaces/msg/VehicleBaselineStatus",
+    }
+
+    # Per-topic throttle rates (ms) for rosbridge subscriptions.
+    # 0 = no throttle (every message forwarded). High-frequency topics
+    # like /scan and /tf should be throttled to avoid flooding.
+    TOPIC_THROTTLE_RATES: dict = {
+        "/scan": 200,
+        "/tf": 200,
+        "/tf_static": 0,
+        "/odom": 100,
+        "/battery_state": 0,
+        "/ros_robot_controller/battery": 0,
+        "/diagnostics": 0,
+        "/vehicle/baseline_status": 0,
     }
 
     # Blocked topic patterns

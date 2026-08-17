@@ -22,6 +22,7 @@ export interface RobotState {
   platform_type?: string;
   template_id?: string;
   enabled_plugins?: string[];
+  host?: string;
   scan?: {
     ranges: number[];
     angle_min: number;
