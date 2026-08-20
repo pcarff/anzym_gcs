@@ -1,7 +1,7 @@
 """ANZYM Zumo Micro-ROS GCS Bridge Node.
 
 This background node bridges GCS commands and Zumo micro-ROS:
-1. Subscribes to /zumo/cmd_vel (geometry_msgs/msg/Twist) -> Packs into std_msgs/msg/Int32 and publishes to /cmd_vel (Best Effort QoS).
+1. Listens to Redis channel 'gcs:zumo:cmd_vel' and ROS2 topic /zumo/cmd_vel -> Packs into std_msgs/msg/Int32 and publishes to /cmd_vel (Best Effort QoS).
 2. Subscribes to /zt (std_msgs/msg/Float32MultiArray) from Zumo -> Extracts battery mV, motor speeds, publishes /zumo/battery_state and sends live Redis telemetry updates.
 """
 
@@ -9,6 +9,7 @@ import sys
 import math
 import time
 import json
+import threading
 import logging
 import rclpy
 from rclpy.node import Node
@@ -32,7 +33,7 @@ def pack_zumo_motor_cmd(throttle: float, steering: float) -> int:
     st = int(max(-255, min(255, steering * 255.0)))
     
     throttle_packed = th & 0xFFFF
-    steering_packed = (st << 16) & 0xFFFF0000
+    steering_packed = (st & 0xFFFF) << 16
     packed_data = steering_packed | throttle_packed
     
     if packed_data > 2147483647:
@@ -60,7 +61,7 @@ class ZumoGCSBridge(Node):
             best_effort_qos
         )
         
-        # GCS Twist Subscriber
+        # GCS Twist Subscriber (ROS2 topic)
         self.gcs_twist_sub = self.create_subscription(
             Twist,
             '/zumo/cmd_vel',
@@ -76,15 +77,38 @@ class ZumoGCSBridge(Node):
         self.target_steering = 0.0
         self.current_throttle = 0.0
         self.current_steering = 0.0
-        self.slew_rate = 30.0  # smooth ramp
-        self.last_cmd_time = self.get_clock().now()
+        self.slew_rate = 35.0  # smooth ramp
+        self.last_cmd_time = time.time()
+        
+        # Start Redis subscriber thread
+        if redis_client:
+            self.redis_thread = threading.Thread(target=self._listen_redis_cmd, daemon=True)
+            self.redis_thread.start()
+            logger.info("Started Redis teleop listener on 'gcs:zumo:cmd_vel'")
         
         self.timer = self.create_timer(0.05, self.update_loop)  # 20 Hz
         logger.info("Zumo GCS Bridge initialized on Domain %s", self.get_namespace())
 
+    def _listen_redis_cmd(self):
+        try:
+            pubsub = redis_client.pubsub()
+            pubsub.subscribe('gcs:zumo:cmd_vel')
+            for msg in pubsub.listen():
+                if msg['type'] == 'message':
+                    try:
+                        data = json.loads(msg['data'])
+                        lin = data.get('linear', {})
+                        ang = data.get('angular', {})
+                        self.target_throttle = float(lin.get('x', 0.0))
+                        self.target_steering = float(ang.get('z', 0.0))
+                        self.last_cmd_time = time.time()
+                    except Exception as e:
+                        logger.error("Error parsing redis twist: %s", e)
+        except Exception as e:
+            logger.error("Redis listener loop exited: %s", e)
+
     def on_gcs_twist(self, msg: Twist):
-        self.last_cmd_time = self.get_clock().now()
-        # Invert linear.x / angular.z as appropriate for skid steer
+        self.last_cmd_time = time.time()
         self.target_throttle = float(msg.linear.x)
         self.target_steering = float(msg.angular.z)
 
@@ -93,8 +117,6 @@ class ZumoGCSBridge(Node):
             return
         battery_mv = msg.data[0]
         volts = battery_mv / 1000.0
-        
-        # Percentage calculation for 4xAA NiMH/Alkaline (4.5V empty, 6.0V full)
         pct = max(0.0, min(100.0, ((volts - 4.5) / (6.0 - 4.5)) * 100.0))
         
         batt_msg = BatteryState()
@@ -104,25 +126,9 @@ class ZumoGCSBridge(Node):
         batt_msg.present = True
         self.battery_pub.publish(batt_msg)
 
-        # Update Redis real-time state for GCS
-        if redis_client:
-            try:
-                now_ts = time.time()
-                redis_client.set("robot:zumo-01:heartbeat", now_ts)
-                redis_client.set("robot:zumo-01:battery", round(pct, 1))
-                redis_client.publish("gcs:realtime:telemetry", json.dumps({
-                    "robot_id": "zumo-01",
-                    "telemetry": {
-                        "battery": round(pct, 1),
-                        "voltage": round(volts, 2),
-                    }
-                }))
-            except Exception as e:
-                logger.debug("Redis publish error: %s", e)
-
     def update_loop(self):
         # Watchdog: Stop if no command for 1.0s
-        elapsed = (self.get_clock().now() - self.last_cmd_time).nanoseconds / 1e9
+        elapsed = time.time() - self.last_cmd_time
         if elapsed > 1.0:
             self.target_throttle = 0.0
             self.target_steering = 0.0

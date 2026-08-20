@@ -689,17 +689,24 @@ async def fleet_websocket(websocket: WebSocket):
                 except Exception:
                     continue
 
-                if msg_data.get("type") == "teleop_cmd" and rosbridge_manager:
+                if msg_data.get("type") == "teleop_cmd":
                     target_robot_id = msg_data.get("robot_id")
                     if target_robot_id:
                         twist_msg = {
                             "linear": msg_data.get("linear", {"x": 0.0, "y": 0.0, "z": 0.0}),
                             "angular": msg_data.get("angular", {"x": 0.0, "y": 0.0, "z": 0.0}),
                         }
-                        # Non-blocking async fire-and-forget publish to prevent WebSocket lag
-                        asyncio.create_task(
-                            rosbridge_manager.publish(target_robot_id, "/gcs/cmd_vel", twist_msg, "geometry_msgs/msg/Twist")
-                        )
+                        if target_robot_id == "zumo-01" or "zumo" in str(target_robot_id).lower():
+                            if redis_client:
+                                try:
+                                    redis_client.publish("gcs:zumo:cmd_vel", json.dumps(twist_msg))
+                                except Exception:
+                                    pass
+                        elif rosbridge_manager:
+                            # Non-blocking async fire-and-forget publish to prevent WebSocket lag
+                            asyncio.create_task(
+                                rosbridge_manager.publish(target_robot_id, "/gcs/cmd_vel", twist_msg, "geometry_msgs/msg/Twist")
+                            )
 
         async def send_periodic():
             while True:
