@@ -2,11 +2,13 @@
 
 This background node bridges GCS commands and Zumo micro-ROS:
 1. Subscribes to /zumo/cmd_vel (geometry_msgs/msg/Twist) -> Packs into std_msgs/msg/Int32 and publishes to /cmd_vel (Best Effort QoS).
-2. Subscribes to /zt (std_msgs/msg/Float32MultiArray) from Zumo -> Extracts battery mV, motor speeds, publishes /zumo/battery_state and sends live telemetry updates.
+2. Subscribes to /zt (std_msgs/msg/Float32MultiArray) from Zumo -> Extracts battery mV, motor speeds, publishes /zumo/battery_state and sends live Redis telemetry updates.
 """
 
 import sys
 import math
+import time
+import json
 import logging
 import rclpy
 from rclpy.node import Node
@@ -14,6 +16,12 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Int32, Float32MultiArray
 from sensor_msgs.msg import BatteryState
+
+try:
+    import redis
+    redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
+except Exception:
+    redis_client = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("zumo_gcs_bridge")
@@ -87,14 +95,30 @@ class ZumoGCSBridge(Node):
         volts = battery_mv / 1000.0
         
         # Percentage calculation for 4xAA NiMH/Alkaline (4.5V empty, 6.0V full)
-        pct = max(0.0, min(1.0, (volts - 4.5) / 1.5))
+        pct = max(0.0, min(100.0, ((volts - 4.5) / (6.0 - 4.5)) * 100.0))
         
         batt_msg = BatteryState()
         batt_msg.header.stamp = self.get_clock().now().to_msg()
         batt_msg.voltage = float(volts)
-        batt_msg.percentage = float(pct)
+        batt_msg.percentage = float(pct / 100.0)
         batt_msg.present = True
         self.battery_pub.publish(batt_msg)
+
+        # Update Redis real-time state for GCS
+        if redis_client:
+            try:
+                now_ts = time.time()
+                redis_client.set("robot:zumo-01:heartbeat", now_ts)
+                redis_client.set("robot:zumo-01:battery", round(pct, 1))
+                redis_client.publish("gcs:realtime:telemetry", json.dumps({
+                    "robot_id": "zumo-01",
+                    "telemetry": {
+                        "battery": round(pct, 1),
+                        "voltage": round(volts, 2),
+                    }
+                }))
+            except Exception as e:
+                logger.debug("Redis publish error: %s", e)
 
     def update_loop(self):
         # Watchdog: Stop if no command for 1.0s
