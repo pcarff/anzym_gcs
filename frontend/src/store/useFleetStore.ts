@@ -292,7 +292,7 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
       const robot: RobotState = {
         id: data.id,
         name: data.name,
-        platform_type: data.platform_type || (data.id.includes('x3') ? 'anzym_x3' : 'anzym_rosorin'),
+        platform_type: data.platform_type || (data.id.includes('zumo') ? 'anzym_zumo' : (data.id.includes('x3') ? 'anzym_x3' : 'anzym_rosorin')),
         status: data.status || 'OFFLINE',
         battery: data.battery ?? 0,
         position: data.position ?? { x: 0, y: 0, theta: 0 },
@@ -316,7 +316,7 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
           updatedRobots[r.id] = {
             ...updatedRobots[r.id],
             name: r.name || updatedRobots[r.id].name,
-            platform_type: r.platform_type || updatedRobots[r.id].platform_type || (r.id.includes('x3') ? 'anzym_x3' : 'anzym_rosorin'),
+            platform_type: r.platform_type || updatedRobots[r.id].platform_type || (r.id.includes('zumo') ? 'anzym_zumo' : (r.id.includes('x3') ? 'anzym_x3' : 'anzym_rosorin')),
             status: r.status || updatedRobots[r.id].status,
             is_connected: r.is_connected ?? updatedRobots[r.id].is_connected,
             teleopMode: r.teleop_mode || updatedRobots[r.id].teleopMode || 'LOCAL',

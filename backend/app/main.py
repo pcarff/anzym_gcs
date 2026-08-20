@@ -112,6 +112,21 @@ async def lifespan(app: FastAPI):
     )
     asyncio.create_task(rosbridge_manager.connect("x3-01"))
 
+    rosbridge_manager.register_robot(
+        "zumo-01",
+        "AnZym-Zumo",
+        "192.168.8.249",
+        8888,
+        platform_type="anzym_zumo",
+    )
+    # Zumo is exclusively GCS remote controlled
+    zumo_conn = rosbridge_manager.active_robots.get("zumo-01")
+    if zumo_conn:
+        zumo_conn.teleop_mode = "GCS_REMOTE"
+        zumo_conn.status = "ONLINE"
+        zumo_conn.is_connected = True
+        zumo_conn.battery = 85.0
+
     logger.info("GCS Backend started successfully")
 
     yield
