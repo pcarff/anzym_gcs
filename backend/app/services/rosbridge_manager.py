@@ -262,8 +262,38 @@ class ROSbridgeManager:
 
                 import time
                 for robot_id, conn in self._robots.items():
-                    if conn.websocket is not None:
-                        if conn.is_connected:
+                    if conn.platform_type == "anzym_zumo" or "zumo" in robot_id.lower():
+                        # For Zumo micro-ROS platform over UDP (non-blocking in thread pool)
+                        try:
+                            def _get_last_zumo_ts():
+                                try:
+                                    import subprocess, re
+                                    res = subprocess.run(['docker', 'logs', '--tail', '10', 'anzym-zumo-microros'], capture_output=True, text=True, timeout=0.5)
+                                    lines = (res.stdout + res.stderr).splitlines()
+                                    for line in reversed(lines):
+                                        m = re.search(r'\[([0-9]+\.[0-9]+)\].*UDPv4AgentLinux.*recv_message', line)
+                                        if m:
+                                            return float(m.group(1))
+                                except Exception:
+                                    pass
+                                return None
+
+                            last_ts = await asyncio.to_thread(_get_last_zumo_ts)
+                            if last_ts is not None and (time.time() - last_ts < 3.5):
+                                conn.last_heartbeat = datetime.fromtimestamp(last_ts, tz=timezone.utc)
+                                conn.is_connected = True
+                                conn.status = "ONLINE"
+                                if conn.battery <= 0:
+                                    conn.battery = 85.0
+                            else:
+                                conn.is_connected = False
+                                conn.status = "OFFLINE"
+                        except Exception:
+                            conn.is_connected = False
+                            conn.status = "OFFLINE"
+                    else:
+                        # Standard rosbridge WebSocket robots (RosOrin, X3, etc.)
+                        if conn.websocket is not None and conn.is_connected:
                             ws_state = getattr(conn.websocket, "state", None)
                             is_closed = (
                                 ws_state == websockets.protocol.State.CLOSED
@@ -279,29 +309,7 @@ class ROSbridgeManager:
                                 conn.status = "OFFLINE"
                                 await self._close_websocket(conn)
                                 self._schedule_reconnect(robot_id)
-                    else:
-                        # For non-websocket robots (e.g. Zumo micro-ROS over UDP)
-                        try:
-                            import subprocess, re
-                            res = subprocess.run(['docker', 'logs', '--tail', '10', 'anzym-zumo-microros'], capture_output=True, text=True, timeout=1.0)
-                            lines = (res.stdout + res.stderr).splitlines()
-                            last_ts = None
-                            for line in reversed(lines):
-                                m = re.search(r'\[([0-9]+\.[0-9]+)\].*UDPv4AgentLinux.*recv_message', line)
-                                if m:
-                                    last_ts = float(m.group(1))
-                                    break
-                            
-                            if last_ts is not None and (time.time() - last_ts < 3.5):
-                                conn.last_heartbeat = datetime.fromtimestamp(last_ts, tz=timezone.utc)
-                                conn.is_connected = True
-                                conn.status = "ONLINE"
-                                if conn.battery <= 0:
-                                    conn.battery = 85.0
-                            else:
-                                conn.is_connected = False
-                                conn.status = "OFFLINE"
-                        except Exception:
+                        else:
                             conn.is_connected = False
                             conn.status = "OFFLINE"
 
