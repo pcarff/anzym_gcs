@@ -696,12 +696,13 @@ async def fleet_websocket(websocket: WebSocket):
                             "linear": msg_data.get("linear", {"x": 0.0, "y": 0.0, "z": 0.0}),
                             "angular": msg_data.get("angular", {"x": 0.0, "y": 0.0, "z": 0.0}),
                         }
+                        logger.info(f"teleop_cmd received for {target_robot_id}: {twist_msg}")
                         if target_robot_id == "zumo-01" or "zumo" in str(target_robot_id).lower():
                             if redis_client:
                                 try:
                                     redis_client.publish("gcs:zumo:cmd_vel", json.dumps(twist_msg))
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logger.error(f"Failed to publish to redis: {e}")
                         elif rosbridge_manager:
                             # Non-blocking async fire-and-forget publish to prevent WebSocket lag
                             asyncio.create_task(

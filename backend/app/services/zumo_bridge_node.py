@@ -154,6 +154,9 @@ class ZumoGCSBridge(Node):
             self.current_throttle / 255.0,
             self.current_steering / 255.0
         )
+        if abs(self.current_throttle) > 10.0 or abs(self.current_steering) > 10.0:
+            logger.info("DRIVING ZUMO: th=%.1f, st=%.1f, packed=%d", self.current_throttle, self.current_steering, packed)
+            
         msg_out = Int32()
         msg_out.data = packed
         self.zumo_cmd_pub.publish(msg_out)
