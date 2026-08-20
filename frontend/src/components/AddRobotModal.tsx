@@ -12,10 +12,10 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
   onClose,
   onRegisterSuccess,
 }) => {
-  const [selectedTemplate, setSelectedTemplate] = useState<'anzym_rosorin' | 'anzym_zumo'>('anzym_rosorin');
-  const [robotId, setRobotId] = useState<string>('rosorin-01');
-  const [robotName, setRobotName] = useState<string>('RosOrin-Alpha');
-  const [host, setHost] = useState<string>('192.168.8.162');
+  const [selectedTemplate, setSelectedTemplate] = useState<'anzym_rosorin' | 'anzym_x3_plus' | 'anzym_zumo'>('anzym_x3_plus');
+  const [robotId, setRobotId] = useState<string>('x3-01');
+  const [robotName, setRobotName] = useState<string>('AnZym-Green-X3');
+  const [host, setHost] = useState<string>('192.168.8.246');
   const [port, setPort] = useState<number>(9090);
   const [enabledPlugins, setEnabledPlugins] = useState<string[]>([
     'video_webrtc',
@@ -33,15 +33,22 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
     );
   };
 
-  const handleTemplateSelect = (template: 'anzym_rosorin' | 'anzym_zumo') => {
+  const handleTemplateSelect = (template: 'anzym_rosorin' | 'anzym_x3_plus' | 'anzym_zumo') => {
     setSelectedTemplate(template);
-    if (template === 'anzym_rosorin') {
+    if (template === 'anzym_x3_plus') {
+      setRobotId('x3-01');
+      setRobotName('AnZym-Green-X3');
+      setHost('192.168.8.246');
+      setEnabledPlugins(['video_webrtc', 'foxglove_visualizer', 'lidar_2d_3d', 'gamepad_teleop']);
+    } else if (template === 'anzym_rosorin') {
       setRobotId('rosorin-01');
       setRobotName('RosOrin-Alpha');
+      setHost('192.168.8.162');
       setEnabledPlugins(['video_webrtc', 'foxglove_visualizer', 'lidar_2d_3d', 'gamepad_teleop']);
     } else {
       setRobotId('zumo-01');
       setRobotName('Zumo-Micro-01');
+      setHost('192.168.8.190');
       setEnabledPlugins(['gamepad_teleop', 'video_webrtc', 'foxglove_visualizer']);
     }
   };
@@ -51,7 +58,7 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/robots/register-from-template', {
+      const response = await fetch('/api/robots/register-from-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,22 +135,49 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
               1. Select Platform Template
             </label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               
-              {/* Option 1: anzym_rosorin */}
+              {/* Option 1: anzym_x3_plus */}
+              <div
+                onClick={() => handleTemplateSelect('anzym_x3_plus')}
+                className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
+                  selectedTemplate === 'anzym_x3_plus'
+                    ? 'bg-emerald-600/10 border-emerald-500 shadow-lg shadow-emerald-500/10'
+                    : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                    anzym_x3_plus
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-300">
+                      Mecanum + Arm
+                    </span>
+                  </span>
+                  {selectedTemplate === 'anzym_x3_plus' && (
+                    <div className="p-1 bg-emerald-500 rounded-full text-white">
+                      <Check className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 line-clamp-3">
+                  Yahboom ROSMaster X3 Plus 4WD Mecanum AMR with 6-DOF Arm, Astra Pro RGB-D, YDLidar, IMU, and WebRTC.
+                </p>
+              </div>
+
+              {/* Option 2: anzym_rosorin */}
               <div
                 onClick={() => handleTemplateSelect('anzym_rosorin')}
-                className={`cursor-pointer p-4 rounded-xl border transition-all ${
+                className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
                   selectedTemplate === 'anzym_rosorin'
                     ? 'bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10'
                     : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                     anzym_rosorin
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300">
-                      AMR + Camera
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-blue-500/20 text-blue-300">
+                      Diff AMR
                     </span>
                   </span>
                   {selectedTemplate === 'anzym_rosorin' && (
@@ -152,34 +186,34 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 line-clamp-2">
+                <p className="text-[11px] text-slate-400 line-clamp-3">
                   NVIDIA Orin-powered AMR platform with camera feed, 2D LiDAR, Foxglove 3D visualizer, and Nav2.
                 </p>
               </div>
 
-              {/* Option 2: anzym_zumo */}
+              {/* Option 3: anzym_zumo */}
               <div
                 onClick={() => handleTemplateSelect('anzym_zumo')}
-                className={`cursor-pointer p-4 rounded-xl border transition-all ${
+                className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
                   selectedTemplate === 'anzym_zumo'
-                    ? 'bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10'
+                    ? 'bg-indigo-600/10 border-indigo-500 shadow-lg shadow-indigo-500/10'
                     : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                     anzym_zumo
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300">
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-indigo-500/20 text-indigo-300">
                       Micro Tracked
                     </span>
                   </span>
                   {selectedTemplate === 'anzym_zumo' && (
-                    <div className="p-1 bg-blue-500 rounded-full text-white">
+                    <div className="p-1 bg-indigo-500 rounded-full text-white">
                       <Check className="w-3 h-3" />
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 line-clamp-2">
+                <p className="text-[11px] text-slate-400 line-clamp-3">
                   Compact micro tracked AMR for agile exploration, gamepad teleop, and lightweight WebRTC camera feed.
                 </p>
               </div>

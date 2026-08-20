@@ -51,7 +51,7 @@ export const EditRobotModal: React.FC<EditRobotModalProps> = ({
 
     try {
       // Call backend registration endpoint to re-establish rosbridge connection with updated IP
-      const response = await fetch('http://localhost:8000/api/robots/register-from-template', {
+      const response = await fetch('/api/robots/register-from-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

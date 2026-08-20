@@ -93,14 +93,24 @@ async def lifespan(app: FastAPI):
             lambda robot_id, msg, t=topic: telemetry_service.ingest(robot_id, t, msg)
         )
 
-    # Auto-register default robot on startup
+    # Auto-register default robots on startup
     rosbridge_manager.register_robot(
         "rosorin-01",
         "RosOrin-Alpha",
         "192.168.8.162",
-        9090
+        9090,
+        platform_type="anzym_rosorin",
     )
     asyncio.create_task(rosbridge_manager.connect("rosorin-01"))
+
+    rosbridge_manager.register_robot(
+        "x3-01",
+        "AnZym-Green-X3",
+        "192.168.8.246",
+        9090,
+        platform_type="anzym_x3",
+    )
+    asyncio.create_task(rosbridge_manager.connect("x3-01"))
 
     logger.info("GCS Backend started successfully")
 
@@ -252,6 +262,7 @@ async def register_robot_from_template(request: TemplateRobotRegisterRequest):
         request.robot_name,
         request.host,
         request.port,
+        platform_type=request.template_id,
     )
     asyncio.create_task(rosbridge_manager.connect(request.robot_id))
 
@@ -273,6 +284,7 @@ async def list_robots():
         robots.append({
             "id": conn.robot_id,
             "name": conn.robot_name,
+            "platform_type": conn.platform_type,
             "status": conn.status,
             "is_connected": conn.is_connected,
             "last_heartbeat": conn.last_heartbeat.isoformat() if conn.last_heartbeat else None,
@@ -619,16 +631,32 @@ async def get_mission(mission_id: int):
 async def fleet_websocket(websocket: WebSocket):
     """WebSocket endpoint for real-time fleet data to the frontend."""
     await connection_manager.connect(websocket)
+    ws_send_lock = asyncio.Lock()
+
+    async def safe_send_text(text: str):
+        try:
+            async with ws_send_lock:
+                await websocket.send_text(text)
+        except Exception:
+            pass
+
+    async def safe_send_json(data: dict):
+        try:
+            async with ws_send_lock:
+                await websocket.send_json(data)
+        except Exception:
+            pass
 
     try:
         # Send initial robot states
         if rosbridge_manager:
             for robot_id, conn in rosbridge_manager.active_robots.items():
-                await websocket.send_json({
+                await safe_send_json({
                     "type": "robot_state",
                     "data": {
                         "id": conn.robot_id,
                         "name": conn.robot_name,
+                        "platform_type": conn.platform_type,
                         "status": conn.status,
                         "is_connected": conn.is_connected,
                         "battery": conn.battery,
@@ -638,47 +666,51 @@ async def fleet_websocket(websocket: WebSocket):
                 })
 
         async def read_incoming():
-            try:
-                while True:
-                    raw_data = await websocket.receive_text()
+            while True:
+                raw_data = await websocket.receive_text()
+                try:
                     msg_data = json.loads(raw_data)
-                    if msg_data.get("type") == "teleop_cmd" and rosbridge_manager:
-                        target_robot_id = msg_data.get("robot_id")
-                        if target_robot_id:
-                            twist_msg = {
-                                "linear": msg_data.get("linear", {"x": 0.0, "y": 0.0, "z": 0.0}),
-                                "angular": msg_data.get("angular", {"x": 0.0, "y": 0.0, "z": 0.0}),
-                            }
-                            await rosbridge_manager.publish(target_robot_id, "/gcs/cmd_vel", twist_msg, "geometry_msgs/msg/Twist")
-            except Exception:
-                pass
+                except Exception:
+                    continue
+
+                if msg_data.get("type") == "teleop_cmd" and rosbridge_manager:
+                    target_robot_id = msg_data.get("robot_id")
+                    if target_robot_id:
+                        twist_msg = {
+                            "linear": msg_data.get("linear", {"x": 0.0, "y": 0.0, "z": 0.0}),
+                            "angular": msg_data.get("angular", {"x": 0.0, "y": 0.0, "z": 0.0}),
+                        }
+                        # Non-blocking async fire-and-forget publish to prevent WebSocket lag
+                        asyncio.create_task(
+                            rosbridge_manager.publish(target_robot_id, "/gcs/cmd_vel", twist_msg, "geometry_msgs/msg/Twist")
+                        )
 
         async def send_periodic():
-            try:
-                while True:
-                    await asyncio.sleep(1.0)
-                    if rosbridge_manager:
-                        states = []
-                        for robot_id, conn in rosbridge_manager.active_robots.items():
-                            states.append({
-                                "id": conn.robot_id,
-                                "status": conn.status,
-                                "is_connected": conn.is_connected,
-                                "battery": conn.battery,
-                                "teleop_mode": conn.teleop_mode,
-                                "host": conn.host,
-                            })
-
-                        await websocket.send_json({
-                            "type": "fleet_update",
-                            "data": {"robots": states},
+            while True:
+                await asyncio.sleep(1.0)
+                if rosbridge_manager:
+                    states = []
+                    for robot_id, conn in rosbridge_manager.active_robots.items():
+                        states.append({
+                            "id": conn.robot_id,
+                            "name": conn.robot_name,
+                            "platform_type": conn.platform_type,
+                            "status": conn.status,
+                            "is_connected": conn.is_connected,
+                            "battery": conn.battery,
+                            "teleop_mode": conn.teleop_mode,
+                            "host": conn.host,
                         })
-            except Exception:
-                pass
+
+                    await safe_send_json({
+                        "type": "fleet_update",
+                        "data": {"robots": states},
+                    })
 
         async def listen_redis():
             if not redis_client:
-                return
+                while True:
+                    await asyncio.sleep(3600)
             pubsub = redis_client.pubsub()
             await pubsub.subscribe(settings.REDIS_REALTIME_CHANNEL)
             try:
@@ -687,21 +719,26 @@ async def fleet_websocket(websocket: WebSocket):
                         raw_data = message["data"]
                         if isinstance(raw_data, bytes):
                             raw_data = raw_data.decode("utf-8")
-                        await websocket.send_text(raw_data)
+                        await safe_send_text(raw_data)
+            except asyncio.CancelledError:
+                pass
             except Exception:
                 pass
             finally:
-                await pubsub.unsubscribe(settings.REDIS_REALTIME_CHANNEL)
+                try:
+                    await pubsub.unsubscribe(settings.REDIS_REALTIME_CHANNEL)
+                except Exception:
+                    pass
 
         read_task = asyncio.create_task(read_incoming())
         periodic_task = asyncio.create_task(send_periodic())
         redis_task = asyncio.create_task(listen_redis())
 
-        done, pending = await asyncio.wait(
-            [read_task, periodic_task, redis_task], return_when=asyncio.FIRST_COMPLETED
-        )
-        for task in pending:
-            task.cancel()
+        try:
+            await read_task
+        finally:
+            periodic_task.cancel()
+            redis_task.cancel()
 
     except WebSocketDisconnect:
         logger.info("Frontend WebSocket disconnected")

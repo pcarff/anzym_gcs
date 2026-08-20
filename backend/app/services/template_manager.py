@@ -18,9 +18,12 @@ class TemplateManager:
 
     def __init__(self, templates_dir: Optional[str] = None):
         if templates_dir is None:
-            # Default to backend/templates directory relative to workspace
-            base_dir = Path(__file__).resolve().parent.parent.parent
-            templates_dir = os.path.join(base_dir, "templates")
+            # Default to backend/templates directory in anzym_gcs_ws, falling back to anzym_green
+            gcs_templates = Path(__file__).resolve().parent.parent.parent / "templates"
+            if gcs_templates.exists():
+                templates_dir = str(gcs_templates)
+            else:
+                templates_dir = "/home/pcarff/Workspaces/anzym_green/templates"
 
         self.templates_dir = Path(templates_dir)
         self.baseline_dir = self.templates_dir / "baseline"
@@ -33,18 +36,24 @@ class TemplateManager:
             logger.warning(f"Template file not found: {file_path}")
             return {}
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            if yaml:
-                return yaml.safe_load(content) or {}
-            else:
-                # Basic JSON fallback if content is JSON
-                import json
-                try:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if yaml:
+                    return yaml.safe_load(content) or {}
+                else:
+                    # Basic JSON fallback if content is JSON
+                    import json
                     return json.loads(content)
-                except Exception:
-                    logger.error("PyYAML is required to parse YAML template files")
-                    return {}
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing YAML file {file_path}: {e}")
+            return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing JSON file {file_path}: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error reading file {file_path}: {e}")
+            return {}
 
     def get_baseline(self, baseline_id: str = "default_robot") -> Dict[str, Any]:
         """Retrieve baseline configuration requirements."""

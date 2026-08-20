@@ -46,3 +46,7 @@ minio_data/
 .DS_Store
 *.swp
 *.swo
+
+*.pid
+.backend.pid
+.frontend.pid

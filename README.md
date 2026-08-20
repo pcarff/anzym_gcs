@@ -8,14 +8,14 @@ An enterprise multi-robot fleet management, spatial mapping, teleoperation, and 
 
 ## Key Features
 
-- **Multi-Robot Fleet Monitoring**: Live status tracking (`ONLINE`, `BUSY`, `OFFLINE`), battery telemetry, odometry position, and zero-latency heartbeat monitoring.
-- **Custom Vehicle Telemetry**: Native support for `gcs_interfaces/msg/VehicleBaselineStatus` — battery health, link quality (RSSI, jitter, packet loss), flight modes, safety flags, and RTK lock status.
-- **Zero-Latency Teleoperation**: Dual-mode Joystick teleoperation (Local Direct vs. GCS Remote over WebSocket) with an integrated 3.0s heartbeat safety watchdog.
+- **Multi-Robot Fleet Monitoring**: Live status tracking (`ONLINE`, `BUSY`, `OFFLINE`), battery telemetry, odometry position, and zero-latency heartbeat monitoring across heterogeneous fleets (NVIDIA Jetson RosOrin differential AMRs, Yahboom ROSMaster X3 Plus 4WD Mecanum AMRs).
+- **Custom Vehicle Telemetry**: Native support for `/battery_state` (`sensor_msgs/msg/BatteryState`) and `gcs_interfaces/msg/VehicleBaselineStatus` — battery voltage, state of charge, link quality (RSSI, jitter, packet loss), flight modes, safety flags, and RTK lock status.
+- **Zero-Latency Dual-Mode Teleoperation**: Dual-mode Joystick teleoperation (`LOCAL` direct vs. `GCS_REMOTE` over rosbridge WebSocket) supporting both 2-DOF differential drive and 3-DOF Holonomic Mecanum (forward/back, lateral strafe, yaw rotation) with integrated safety watchdog failsafes.
+- **Ultra-Low Latency Video Streaming**: Primary WebRTC streaming via WHEP (MediaMTX on port 8889, `<200ms` latency) with automatic fallback to HTTP MJPEG (`web_video_server` on port 8080).
 - **Interactive LiDAR & Spatial Mapping**: 2D LaserScan visualization canvas with mouse wheel zoom (40% to 500%), click-and-drag pan, and navigation waypoint targeting.
-- **Foxglove Studio 3D Integration**: 1-click launcher for host desktop Foxglove Studio (`foxglove://` deep links) with standard `rosbridge-websocket` protocol support (`ws://192.168.8.162:9090`) and pre-configured 3D LiDAR layouts (`/api/foxglove-lidar-layout.json`).
-- **Live Video Streaming**: MJPEG camera streams from the robot's `web_video_server` (port 8080), with auto-retry and real connection state tracking.
-- **Live Topic Echo Inspector**: Real-time ROS2 message inspector for `/scan`, `/odom`, `/tf`, `/tf_static`, `/battery_state`, `/vehicle/baseline_status`, `/cmd_vel`, and custom topics.
-- **Template & Plugin Architecture**: Template-driven platform instantiation system for Jetson Orin AMRs, Micro-AMRs, and custom ROS2 platforms.
+- **Foxglove Studio 3D Integration**: 1-click launcher for host desktop Foxglove Studio (`foxglove://` deep links) with standard `rosbridge-websocket` protocol support and pre-configured 3D LiDAR layouts (`/api/foxglove-lidar-layout.json`).
+- **Live Topic Echo Inspector**: Real-time ROS2 message inspector for `/scan`, `/odom`, `/tf`, `/tf_static`, `/battery_state`, `/vehicle/baseline_status`, `/cmd_vel`, `/teleop_mode_status`, and custom topics.
+- **Template & Plugin Architecture**: Dynamic YAML template-driven platform instantiation system for Jetson Orin AMRs (`anzym_rosorin`), Yahboom ROSMaster X3 Plus Mecanum AMRs (`anzym_x3` / `anzym_x3_plus`), and Micro-AMRs (`anzym_zumo`).
 
 ---
 
@@ -87,19 +87,21 @@ docker compose up --build -d
 
 ## Robot Platform Configuration & Templates
 
-The GCS automatically registers default robots on boot (`rosorin-01` at `192.168.8.162:9090`).
+The GCS automatically discovers and registers configured fleet robots on boot:
+- **`rosorin-01`** (`RosOrin-Alpha` at `192.168.8.162:9090`): Jetson Orin Differential AMR with Intel RealSense D435i, 2D LiDAR, and WebRTC streaming.
+- **`x3-01`** (`AnZym-Green-X3` at `192.168.8.246:9090`): Yahboom ROSMaster X3 Plus 4WD Mecanum AMR + 6-DOF Arm with Astra Pro Plus depth camera, YDLidar TG30, and WebRTC streaming.
 
-You can instantiate new platforms using pre-built templates via the UI or API:
+You can also instantiate new platforms using pre-built templates via the UI or API:
 
 ```http
-POST /api/robots/from-template
+POST /api/robots/register-from-template
 Content-Type: application/json
 
 {
-  "robot_id": "rosorin-01",
-  "name": "RosOrin-Alpha",
-  "template_id": "anzym_rosorin",
-  "host": "192.168.8.162",
+  "robot_id": "x3-01",
+  "robot_name": "AnZym-Green-X3",
+  "template_id": "anzym_x3",
+  "host": "192.168.8.246",
   "port": 9090
 }
 ```
@@ -108,10 +110,13 @@ For detailed instructions on authoring custom robot platform templates and plugi
 
 ---
 
-## Teleoperation Modes
+## Teleoperation Modes (Differential & Mecanum)
 
-- **LOCAL DIRECT**: Local joystick hardware connected directly to the robot's onboard controller handles motion commands.
-- **GCS REMOTE**: GCS streams velocity commands (`/gcs/cmd_vel`) at 20Hz over rosbridge. The onboard `teleop_mode_switcher` node validates the 3.0s heartbeat watchdog before forwarding commands to `/controller/cmd_vel`.
+- **`LOCAL` (Default)**: Local joystick hardware connected directly to the robot or workstation publishes to `/cmd_vel_local` / `/joy/cmd_vel`. The onboard `teleop_mode_switcher` passes commands directly to `/cmd_vel` without network latency.
+- **`GCS_REMOTE`**: GCS Web Gamepad streams velocity commands (`/gcs/cmd_vel`) at 20 Hz (50 ms intervals) over rosbridge.
+  - **Differential Drive** (`anzym_rosorin`): `linear.x` (forward/back) and `angular.z` (yaw).
+  - **Holonomic Mecanum** (`anzym_x3` / `anzym_x3_plus`): `linear.x` (forward/back), `linear.y` (lateral strafe), and `angular.z` (yaw).
+  - **Failsafe Watchdog**: If GCS commands cease for `> 2.0s` while in `GCS_REMOTE` mode, the robot halts immediately and falls back to `LOCAL` mode automatically.
 
 ---
 
@@ -120,34 +125,38 @@ For detailed instructions on authoring custom robot platform templates and plugi
 1. In the Mapping panel, click **`Foxglove Studio 3D`**.
 2. Click **`Launch Foxglove Desktop App`** to trigger the workstation's native Foxglove Studio via `foxglove://` deep link protocol.
 3. Click **`Download 3D LiDAR Layout`** to download `foxglove_lidar_layout.json` and import it in Foxglove Studio (`Layout` -> `Import from file...`).
-4. Ensure the connection is set to `ws://192.168.8.162:9090` using the **Rosbridge (ROS 1/2)** driver.
+4. Ensure the connection is set to `ws://<robot_host>:8765` using the **Foxglove WebSocket** driver, or `ws://<robot_host>:9090` using the **Rosbridge (ROS 1/2)** driver.
 
 ---
 
 ## System Architecture
 
 ```text
-+-------------------------------------------------------+
-|                 GCS React Frontend                    |
-|       (Dashboard, MapCanvas, Topic Inspector)         |
-+---------------------------+---------------------------+
-                            | WebSocket / HTTP
-+---------------------------v---------------------------+
-|                  FastAPI Backend                      |
-|       (ROSbridgeManager, TelemetryService)            |
-+---+----------+----------+-----------+----------+-----+
-    |          |          |           |          |
-+---v---+ +----v----+ +---v---+ +----v----+ +---v---+
-|Postgres| | Redis   | |InfluxDB| | MinIO  | |       |
-|  (SQL) | |(Pub/Sub)| | (TSDB) | |  (S3)  | |       |
-+--------+ +---------+ +--------+ +--------+ |       |
-                                              |       |
-              WebSocket (rosbridge JSON)      |       |
-+---------------------------------------------v-------+
-|               ROS2 Jetson Robot (rosorin)             |
-|   rosbridge:9090  web_video_server:8080               |
-|   /vehicle/baseline_status  /scan  /odom  /tf         |
-+-------------------------------------------------------+
++-----------------------------------------------------------------------------------+
+|                              GCS React Frontend                                   |
+|       (Dashboard, MapCanvas, WebRTC/MJPEG Video Player, Topic Inspector)          |
++-----------------------------------------+-----------------------------------------+
+                                          | WebSocket (/ws/fleet) / HTTP REST
++-----------------------------------------v-----------------------------------------+
+|                               FastAPI Backend                                     |
+|              (ROSbridgeManager, TelemetryService, TemplateManager)                |
++---+--------------------+--------------------+--------------------+----------------+
+    |                    |                    |                    |
++---v---+            +---v----+           +---v---+            +---v---+
+|Postgres|           | Redis  |           |InfluxDB|           | MinIO |
+| (SQL)  |           |(PubSub)|           | (TSDB)|            |  (S3) |
++--------+           +--------+           +-------+            +-------+
+                         |                    |
+        WebSocket (rosbridge JSON :9090)      | WebRTC WHEP (:8889) / MJPEG (:8080)
+    +--------------------+--------------------+--------------------+
+    |                                                              |
++---v-----------------------------------+   +----------------------v----------------+
+|    ROS2 Jetson Robot (RosOrin)        |   |    ROS2 Jetson Robot (AnZym Green)    |
+|  - rosbridge:9090  web_video:8080     |   |  - rosbridge:9090  mediamtx:8889      |
+|  - Differential Drive AMR             |   |  - 4WD Mecanum AMR + 6-DOF Arm        |
+|  - /battery_state  /scan  /tf  /odom  |   |  - /battery_state  /scan  /camera/... |
+|  - teleop_mode_switcher (/cmd_vel)    |   |  - teleop_mode_switcher (/cmd_vel)    |
++---------------------------------------+   +---------------------------------------+
 ```
 
 For in-depth architecture details, see [docs/architecture.md](docs/architecture.md).

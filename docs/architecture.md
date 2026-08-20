@@ -5,22 +5,23 @@
 ```mermaid
 graph TD
     subgraph "AMR Fleet (ROS2 HUMBLE)"
-        R1["Robot 1<br/>(ROS2 + rosbridge)"]
-        R2["Robot 2<br/>(ROS2 + rosbridge)"]
-        R3["Robot 3<br/>(ROS2 + rosbridge)"]
+        R1["RosOrin-Alpha<br/>(Differential AMR<br/>rosbridge:9090 | web_video:8080)"]
+        R2["AnZym-Green-X3<br/>(4WD Mecanum + 6-DOF Arm<br/>rosbridge:9090 | mediamtx:8889)"]
+        R3["AnZym-Zumo<br/>(Micro Tracked AMR<br/>rosbridge:9090)"]
     end
 
     subgraph "Network Boundary"
-        WiFi["Wi-Fi / Mesh Network<br/>(Variable Latency)"]
+        WiFi["Wi-Fi / LAN Network<br/>(CycloneDDS Domain 42)"]
     end
 
     subgraph "GCS Backend Infrastructure"
         subgraph "FastAPI Services"
-            WS["WebSocket Manager<br/>(rosbridge connections)"]
-            API["REST API<br/>(/api/missions, /api/robots)"]
-            TELEM["Telemetry Processor<br/>(Parser + Batcher)"]
-            HB["Heartbeat Monitor<br/>(10s timeout)"]
-            MC["Mission Controller<br/>(Nav2 Goal Dispatcher)"]
+            WS["ROSbridge Manager<br/>(Multi-robot WS clients)"]
+            API["REST API<br/>(/api/robots, /api/templates)"]
+            TELEM["Telemetry Service<br/>(Redis Streams + InfluxDB)"]
+            HB["Heartbeat Monitor<br/>(10s timeout, auto-reconnect)"]
+            MC["Mission Controller<br/>(Nav2 Action Dispatcher)"]
+            TM["Template Manager<br/>(Dynamic YAML Registry)"]
             ESTOP["E-Stop Handler"]
         end
 
@@ -34,53 +35,41 @@ graph TD
 
     subgraph "Frontend (React + Vite)"
         DASH["Fleet Dashboard<br/>(Zustand Store)"]
-        MAP["MapCanvas<br/>(Mapbox + R3F)"]
-        DIAG["Diagnostics Panel"]
+        MAP["MapCanvas<br/>(2D LaserScan + Foxglove 3D)"]
+        DIAG["Diagnostics & Telemetry"]
         MISSION["Mission Control"]
-        WS_CLIENT["WebSocket Client<br/>(Auto-reconnect)"]
-        VIDEO["MJPEG Video Player<br/>(web_video_server)"]
+        WS_CLIENT["Fleet WebSocket Client<br/>(/ws/fleet)"]
+        VIDEO["WebRTC / MJPEG Player<br/>(WHEP:8889 / MJPEG:8080)"]
+        TELEOP["Gamepad Teleop<br/>(Differential & Mecanum 3-DOF)"]
     end
 
     %% Data Flow: Robot -> Backend
-    R1 -->|"/battery_state, /vehicle/baseline_status, /scan, /tf"| WiFi
-    R2 -->|"/battery_state, /vehicle/baseline_status, /scan, /tf"| WiFi
-    R3 -->|"/battery_state, /vehicle/baseline_status, /scan, /tf"| WiFi
-    WiFi -->|"WebSocket (rosbridge protocol)"| WS
+    R1 -->|"/battery_state, /scan, /odom, /tf"| WiFi
+    R2 -->|"/battery_state, /scan, /odom, /tf, /teleop_mode_status"| WiFi
+    R3 -->|"/battery_state, /scan, /tf"| WiFi
+    WiFi -->|"WebSocket (rosbridge JSON :9090)"| WS
 
-    WS -->|"Raw JSON messages"| TELEM
+    WS -->|"Raw ROS messages"| TELEM
     TELEM -->|"Parsed telemetry"| INFLUX
-    TELEM -->|"Real-time state (per-robot + gcs:realtime)"| REDIS
-    HB -->|"OFFLINE status"| REDIS
+    TELEM -->|"Real-time state (Redis Pub/Sub)"| REDIS
+    HB -->|"OFFLINE / ONLINE status"| REDIS
     WS -->|"Heartbeat check"| HB
 
-    %% Mission Control Flow
-    API -->|"Create mission"| PG
-    MC -->|"Nav2Goal via rosbridge"| WS
-    WS -->|"Goal -> Robot"| WiFi
-    WiFi -->|"GoalAccepted ack"| WS
-    WS -->|"Ack -> MC"| MC
-
-    %% E-Stop Flow
-    ESTOP -->|"/std_srvs/SetBool"| WS
+    %% Teleop Flow
+    TELEOP -->|"linearX, linearY, angularZ"| WS_CLIENT
+    WS_CLIENT -->|"teleop_cmd (/gcs/cmd_vel)"| WS
+    WS -->|"/gcs/cmd_vel (Twist)"| WiFi
+    WiFi -->|"teleop_mode_switcher"| R2
 
     %% Redis -> Frontend
-    REDIS -->|"Pub/Sub state updates"| WS_CLIENT
+    REDIS -->|"Fleet telemetry stream"| WS_CLIENT
     WS_CLIENT --> DASH
     WS_CLIENT --> MAP
     WS_CLIENT --> DIAG
 
-    %% Frontend -> Backend
-    DASH -->|"REST API"| API
-    MISSION -->|"POST /api/missions"| API
-    MAP -->|"POST /api/robots/{id}/goal"| API
-
-    %% Video via MJPEG (direct robot -> frontend)
-    R1 -->|"MJPEG HTTP (web_video_server:8080)"| VIDEO
-    R2 -->|"MJPEG HTTP (web_video_server:8080)"| VIDEO
-
-    %% Map storage
-    MAP -->|"GET map S3 URL"| API
-    API --> MINIO
+    %% Direct Video Streams
+    R2 -->|"WebRTC WHEP (:8889)"| VIDEO
+    R1 -->|"MJPEG HTTP (:8080)"| VIDEO
 ```
 
 ## 2. Database Schema

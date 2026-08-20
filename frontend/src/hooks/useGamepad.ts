@@ -37,15 +37,12 @@ export function useGamepad(options: UseGamepadOptions = {}) {
     buttons: [],
   });
 
-  const animFrameRef = useRef<number | null>(null);
-
   const applyDeadzone = (value: number): number => {
     return Math.abs(value) < deadzone ? 0 : value;
   };
 
   useEffect(() => {
     if (!enabled) {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       setGamepadState((prev) => ({
         ...prev,
         velocity: { linearX: 0, linearY: 0, angularZ: 0 },
@@ -93,16 +90,13 @@ export function useGamepad(options: UseGamepadOptions = {}) {
           buttons: [],
         });
       }
-
-      animFrameRef.current = requestAnimationFrame(updateGamepadStatus);
     };
 
-    animFrameRef.current = requestAnimationFrame(updateGamepadStatus);
+    updateGamepadStatus();
+    const pollInterval = setInterval(updateGamepadStatus, 20);
 
     return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
+      clearInterval(pollInterval);
     };
   }, [enabled, deadzone, maxLinear, maxAngular]);
 

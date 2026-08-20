@@ -14,6 +14,7 @@ backend/templates/
 │   └── default_robot.yaml      # Baseline default specifications inherited by all platforms
 ├── platforms/
 │   ├── anzym_rosorin.yaml      # Jetson Orin AMR platform specification
+│   ├── anzym_x3_plus.yaml      # Yahboom ROSMaster X3 Plus 4WD Mecanum AMR + 6-DOF Arm platform
 │   └── anzym_zumo.yaml         # Compact Micro-AMR platform specification
 └── plugins/
     ├── foxglove_visualizer.yaml # Foxglove Studio 3D visualization plugin
@@ -91,6 +92,58 @@ default_topics:
   - topic: "/amcl_pose"
     type: "geometry_msgs/msg/PoseWithCovarianceStamped"
     rate_limit_hz: 10
+```yaml
+id: anzym_x3_plus
+name: ANZYM Green Yahboom ROSMaster X3 Plus
+version: "1.0.0"
+category: "mecanum_amr_with_arm"
+description: Yahboom ROSMaster X3 Plus 4WD Mecanum AMR with 6-DOF Robotic Arm, Astra Pro Plus depth camera, YDLidar TG30, and Jetson Orin Nano / Xavier.
+baseline_ref: default_robot
+
+recommended_plugins:
+  - video_webrtc
+  - foxglove_visualizer
+  - lidar_2d_3d
+  - gamepad_teleop
+
+capabilities:
+  has_camera: true
+  has_lidar: true
+  has_nav2: true
+  has_foxglove: true
+  has_arm: true
+  arm_dof: 6
+  drive_type: "mecanum"
+
+camera_specs:
+  model: "Orbbec Astra Pro Plus RGB-D"
+  topics:
+    color: "/camera/color/image_raw"
+    depth: "/camera/depth/image_raw"
+    ir: "/camera/ir/image_raw"
+    pointcloud: "/camera/depth/points"
+  webrtc_enabled: true
+  webrtc_port: 8889
+  webrtc_path: "/robot_cam/whep"
+  video_port: 8080
+  video_method: "webrtc"
+
+default_topics:
+  - topic: "/battery_state"
+    type: "sensor_msgs/msg/BatteryState"
+    rate_limit_hz: 1
+  - topic: "/camera/color/image_raw"
+    type: "sensor_msgs/msg/Image"
+    rate_limit_hz: 30
+  - topic: "/scan"
+    type: "sensor_msgs/msg/LaserScan"
+    rate_limit_hz: 15
+  - topic: "/odom"
+    type: "nav_msgs/msg/Odometry"
+    rate_limit_hz: 20
+  - topic: "/teleop_mode_status"
+    type: "std_msgs/msg/String"
+    rate_limit_hz: 1
 ```
 
 ---
@@ -100,7 +153,7 @@ default_topics:
 To add support for a new robot type (e.g., `my_custom_robot`):
 
 1. Create a new YAML file in `backend/templates/platforms/my_custom_robot.yaml`.
-2. Define the platform `id`, `name`, `capabilities`, and `default_topics`.
+2. Define the platform `id`, `name`, `capabilities`, `camera_specs`, and `default_topics`.
 3. Save the file. The backend `TemplateManager` dynamically discovers all `.yaml` files in `backend/templates/platforms/` without requiring code changes or server restarts!
 
 ---
@@ -119,6 +172,11 @@ GET /api/templates
       "id": "anzym_rosorin",
       "name": "ANZYM RosOrin AMR Platform",
       "recommended_plugins": ["video_webrtc", "foxglove_visualizer", "lidar_2d_3d", "gamepad_teleop"]
+    },
+    {
+      "id": "anzym_x3",
+      "name": "ANZYM Green Yahboom ROSMaster X3 Plus",
+      "recommended_plugins": ["video_webrtc", "foxglove_visualizer", "lidar_2d_3d", "gamepad_teleop"]
     }
   ],
   "plugins": [
@@ -130,14 +188,14 @@ GET /api/templates
 
 ### Instantiate Robot from Template
 ```http
-POST /api/robots/from-template
+POST /api/robots/register-from-template
 Content-Type: application/json
 
 {
-  "robot_id": "rosorin-01",
-  "name": "RosOrin-Alpha",
-  "template_id": "anzym_rosorin",
-  "host": "192.168.8.162",
+  "robot_id": "x3-01",
+  "robot_name": "AnZym-Green-X3",
+  "template_id": "anzym_x3",
+  "host": "192.168.8.246",
   "port": 9090
 }
 ```

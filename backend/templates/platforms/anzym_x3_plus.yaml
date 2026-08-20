@@ -1,0 +1,51 @@
+id: anzym_x3_plus
+name: ANZYM Green Yahboom ROSMaster X3 Plus
+version: "1.0.0"
+category: "mecanum_amr_with_arm"
+description: Yahboom ROSMaster X3 Plus 4WD Mecanum AMR platform powered by NVIDIA Jetson with 6-DOF Robotic Arm, Astra Pro RGB-D Depth Camera, YDLidar 2D LiDAR, 9-Axis IMU, and ROS2 Humble.
+baseline_ref: default_robot
+recommended_plugins:
+  - video_webrtc
+  - foxglove_visualizer
+  - lidar_2d_3d
+  - gamepad_teleop
+capabilities:
+  has_camera: true
+  has_lidar: true
+  has_arm: true
+  arm_dof: 6
+  has_nav2: true
+  has_foxglove: true
+  drive_type: "mecanum"
+camera_specs:
+  model: "Orbbec Astra Pro Plus RGB-D"
+  topics:
+    color: "/camera/color/image_raw"
+    depth: "/camera/depth/image_raw"
+  video_port: 8080
+  video_method: "webrtc"
+  webrtc_enabled: true
+  webrtc_port: 8889
+  webrtc_path: "/robot_cam/whep"
+default_topics:
+  - topic: "/battery_state"
+    type: "sensor_msgs/msg/BatteryState"
+    rate_limit_hz: 1
+  - topic: "/camera/color/image_raw"
+    type: "sensor_msgs/msg/Image"
+    rate_limit_hz: 30
+  - topic: "/scan"
+    type: "sensor_msgs/msg/LaserScan"
+    rate_limit_hz: 15
+  - topic: "/odom"
+    type: "nav_msgs/msg/Odometry"
+    rate_limit_hz: 10
+  - topic: "/imu/data"
+    type: "sensor_msgs/msg/Imu"
+    rate_limit_hz: 20
+  - topic: "/joint_states"
+    type: "sensor_msgs/msg/JointState"
+    rate_limit_hz: 10
+  - topic: "/amcl_pose"
+    type: "geometry_msgs/msg/PoseWithCovarianceStamped"
+    rate_limit_hz: 10

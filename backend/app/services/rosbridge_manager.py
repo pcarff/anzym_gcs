@@ -22,6 +22,7 @@ class RobotConnection:
     robot_name: str
     host: str
     port: int
+    platform_type: str = "anzym_rosorin"
     websocket: Optional[WebSocketClientProtocol] = None
     is_connected: bool = False
     last_heartbeat: Optional[datetime] = None
@@ -59,18 +60,27 @@ class ROSbridgeManager:
         await self._disconnect_all()
         logger.info("ROSbridgeManager stopped")
 
-    def register_robot(self, robot_id: str, robot_name: str, host: str, port: int) -> RobotConnection:
+    def register_robot(
+        self,
+        robot_id: str,
+        robot_name: str,
+        host: str,
+        port: int,
+        platform_type: str = "anzym_rosorin",
+    ) -> RobotConnection:
         """Register a robot for connection management."""
         if robot_id in self._robots:
             logger.warning(f"Robot {robot_id} already registered, updating connection info")
             self._robots[robot_id].host = host
             self._robots[robot_id].port = port
+            self._robots[robot_id].platform_type = platform_type
         else:
             self._robots[robot_id] = RobotConnection(
                 robot_id=robot_id,
                 robot_name=robot_name,
                 host=host,
                 port=port,
+                platform_type=platform_type,
             )
         return self._robots[robot_id]
 
@@ -95,7 +105,8 @@ class ROSbridgeManager:
             return False
 
         conn = self._robots[robot_id]
-        if conn._reconnect_task and not conn._reconnect_task.done():
+        cur_task = asyncio.current_task()
+        if conn._reconnect_task and conn._reconnect_task != cur_task and not conn._reconnect_task.done():
             conn._reconnect_task.cancel()
             conn._reconnect_task = None
 
@@ -272,18 +283,22 @@ class ROSbridgeManager:
             except Exception as e:
                 logger.error(f"Error in heartbeat monitor: {e}")
 
-    async def _reconnect(self, robot_id: str, max_attempts: int = 10, delay: int = 5):
-        """Attempt to reconnect a robot."""
-        for attempt in range(1, max_attempts + 1):
-            if not self._running:
-                return
+    async def _reconnect(self, robot_id: str, delay: int = 5):
+        """Attempt to reconnect a robot continuously while backend is running."""
+        attempt = 1
+        while self._running:
             await asyncio.sleep(delay)
-            logger.info(f"Reconnection attempt {attempt}/{max_attempts} for robot {robot_id}")
+            if robot_id not in self._robots:
+                return
+            conn = self._robots[robot_id]
+            if conn.is_connected:
+                return
+            logger.info(f"Reconnection attempt {attempt} for robot {conn.robot_name} ({robot_id})")
             success = await self.connect(robot_id)
             if success:
                 logger.info(f"Robot {robot_id} reconnected successfully")
                 return
-        logger.error(f"Failed to reconnect robot {robot_id} after {max_attempts} attempts")
+            attempt += 1
 
     def _get_conn(self, robot_id: str) -> Optional[RobotConnection]:
         """Get active robot connection by ID, name, or fallback."""

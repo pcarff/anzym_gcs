@@ -263,7 +263,10 @@ export function Dashboard() {
           
           {/* Top Section: Map Canvas with Native/Foxglove toggle */}
           <div className="flex-1 min-h-[440px]">
-            <MapCanvas onCoordinateClick={handleCoordinateClick} />
+            <MapCanvas
+              onCoordinateClick={handleCoordinateClick}
+              selectedRobotHost={selectedRobot?.host || (selectedRobot?.id === 'x3-01' ? '192.168.8.246' : '192.168.8.162')}
+            />
           </div>
 
           {/* Bottom Section: WebRTC Live Camera Feed Panel */}
@@ -272,11 +275,13 @@ export function Dashboard() {
               robotId={selectedRobot?.id}
               robotName={selectedRobot?.name}
               robotHost={selectedRobot?.host}
-              platformType={selectedRobot?.platform_type || 'anzym_rosorin'}
+              platformType={selectedRobot?.platform_type || 'anzym_x3'}
               isRobotOnline={Boolean(selectedRobot && selectedRobot.status === 'ONLINE')}
               topic={
                 selectedRobot?.platform_type === 'anzym_zumo'
                   ? '/zumo/camera/image_raw'
+                  : (selectedRobot?.platform_type === 'anzym_x3' || selectedRobot?.platform_type === 'anzym_x3_plus')
+                  ? '/camera/color/image_raw'
                   : '/depth_cam/rgb0/image_raw'
               }
             />
@@ -446,7 +451,7 @@ function LevelIndicator({ level }: { level: number }) {
 
 async function sendEStop(robotId: string) {
   try {
-    await fetch(`http://localhost:8000/api/robots/${robotId}/e-stop`, { method: 'POST' });
+    await fetch(`/api/robots/${robotId}/e-stop`, { method: 'POST' });
   } catch (error) {
     console.error('Failed to send e-stop:', error);
   }
