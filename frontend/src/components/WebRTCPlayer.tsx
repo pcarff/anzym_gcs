@@ -33,7 +33,7 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const effectiveHost = robotHost || (robotId.includes('192') ? robotId : (robotId.includes('x3') || platformType === 'anzym_x3_plus' ? '192.168.8.246' : '192.168.8.162'));
+  const effectiveHost = robotHost || (robotId.includes('192') ? robotId : (robotId.includes('x3') || platformType === 'anzym_x3_plus' || platformType === 'anzym_x3' ? '192.168.8.246' : '192.168.8.162'));
   const whepUrl = `http://${effectiveHost}:${webrtcPort}/robot_cam/whep`;
   const mjpegUrl = `http://${effectiveHost}:${videoPort}/stream?topic=${encodeURIComponent(topic)}`;
 
