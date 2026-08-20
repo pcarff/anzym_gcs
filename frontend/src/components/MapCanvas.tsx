@@ -134,15 +134,15 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         const screenX = robot.position.x * 3.5;
         const screenY = -robot.position.y * 3.5;
 
-        // Render LiDAR Scan for active selected robot
+        // Render LiDAR Scan ONLY for the active selected robot when real scan data is present
         if (isSelected && showLidarOverlay && hasLidar) {
-          ctx.save();
-          ctx.translate(screenX, screenY);
-
-          scanAngleOffset += 0.02;
           const hasRealScan = robot.scan && Array.isArray(robot.scan.ranges) && robot.scan.ranges.length > 0;
 
           if (hasRealScan) {
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(-robot.position.theta);
+
             // Plot real ROS2 LaserScan ranges
             const scanData = robot.scan!;
             const ranges = scanData.ranges;
@@ -161,7 +161,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
               // Laser ray line
               ctx.beginPath();
-              ctx.strokeStyle = 'rgba(16, 185, 129, 0.12)';
+              ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
               ctx.lineWidth = 0.5 / zoomLevel;
               ctx.moveTo(0, 0);
               ctx.lineTo(hitX, hitY);
@@ -169,47 +169,13 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
               // Real LiDAR Point Cloud Hit
               ctx.beginPath();
-              ctx.fillStyle = i % 4 === 0 ? 'rgba(56, 189, 248, 0.95)' : 'rgba(16, 185, 129, 0.95)';
+              ctx.fillStyle = i % 2 === 0 ? '#38bdf8' : '#10b981';
               ctx.arc(hitX, hitY, 2.5 / zoomLevel, 0, 2 * Math.PI);
               ctx.fill();
             });
-          } else {
-            // Simulated 360-degree LiDAR Rays & Range Hits
-            const numRays = 180;
-            for (let i = 0; i < numRays; i++) {
-              const angle = (i * (2 * Math.PI)) / numRays + scanAngleOffset;
-              
-              const obstacleSeed = Math.sin(angle * 5) * Math.cos(angle * 3);
-              const distMeters = 15 + obstacleSeed * 12 + (Math.sin(angle * 8) > 0.5 ? -6 : 4);
-              const screenDist = distMeters * 35;
 
-              const hitX = Math.cos(angle) * screenDist;
-              const hitY = Math.sin(angle) * screenDist;
-
-              // Faint laser ray line
-              ctx.beginPath();
-              ctx.strokeStyle = 'rgba(16, 185, 129, 0.08)';
-              ctx.lineWidth = 0.5 / zoomLevel;
-              ctx.moveTo(0, 0);
-              ctx.lineTo(hitX, hitY);
-              ctx.stroke();
-
-              // LiDAR Point Cloud Hit
-              ctx.beginPath();
-              ctx.fillStyle = i % 7 === 0 ? 'rgba(56, 189, 248, 0.9)' : 'rgba(16, 185, 129, 0.85)';
-              ctx.arc(hitX, hitY, 1.8 / zoomLevel, 0, 2 * Math.PI);
-              ctx.fill();
-            }
+            ctx.restore();
           }
-
-          // LiDAR Sweeping Radar Sweep Arc
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.arc(0, 0, 75, scanAngleOffset, scanAngleOffset + 0.5);
-          ctx.fillStyle = 'rgba(16, 185, 129, 0.06)';
-          ctx.fill();
-
-          ctx.restore();
         }
 
         // Draw Robot Body
@@ -348,7 +314,11 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
                 <span>Active Fleet: {Object.keys(robots).length}</span>
                 <span>•</span>
                 <span className="text-emerald-400 font-mono">
-                  {showLidarOverlay ? 'LiDAR /scan (15Hz)' : 'LiDAR hidden'}
+                  {showLidarOverlay
+                    ? activeRobot?.scan?.ranges?.length
+                      ? `LiDAR /scan (${activeRobot.scan.ranges.length} pts)`
+                      : 'LiDAR /scan (Live)'
+                    : 'LiDAR hidden'}
                 </span>
               </div>
               <div className="text-[10px] text-slate-500 italic pt-1">
