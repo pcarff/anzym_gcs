@@ -2,7 +2,7 @@
 
 An enterprise multi-robot fleet management, spatial mapping, teleoperation, and diagnostics dashboard built for ROS2 mobile robots.
 
-![ANZYM GCS Banner](docs/architecture.md)
+![ANZYM GCS Banner](docs/images/banner.jpg)
 
 ---
 
