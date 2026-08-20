@@ -119,13 +119,14 @@ async def lifespan(app: FastAPI):
         8888,
         platform_type="anzym_zumo",
     )
-    # Zumo is exclusively GCS remote controlled
+    # Zumo is initialized as OFFLINE until live micro-ROS telemetry is received
     zumo_conn = rosbridge_manager.active_robots.get("zumo-01")
     if zumo_conn:
         zumo_conn.teleop_mode = "GCS_REMOTE"
-        zumo_conn.status = "ONLINE"
-        zumo_conn.is_connected = True
-        zumo_conn.battery = 85.0
+        zumo_conn.status = "OFFLINE"
+        zumo_conn.is_connected = False
+        zumo_conn.battery = 0.0
+        zumo_conn.last_heartbeat = None
 
     logger.info("GCS Backend started successfully")
 

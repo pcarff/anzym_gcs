@@ -221,7 +221,7 @@ class ROSbridgeManager:
             return
 
         msg_data = message.get("msg", {})
-        if topic in ("/battery_state", "/ros_robot_controller/battery"):
+        if topic in ("/battery_state", "/ros_robot_controller/battery", "/zumo/battery_state"):
             if "percentage" in msg_data:
                 conn.battery = round(msg_data.get("percentage", 0.0) * 100.0, 1)
             elif "data" in msg_data:
@@ -229,6 +229,8 @@ class ROSbridgeManager:
                 volts = mv / 1000.0
                 if volts > 5.0:
                     pct = min(100.0, max(0.0, ((volts - 10.5) / (12.6 - 10.5)) * 100.0))
+                elif volts > 4.0: # Zumo 4xAA battery range (4.5V - 6.0V)
+                    pct = min(100.0, max(0.0, ((volts - 4.5) / (6.0 - 4.5)) * 100.0))
                 else:
                     pct = 0.0
                 conn.battery = round(pct, 1)
@@ -260,23 +262,27 @@ class ROSbridgeManager:
 
                 for robot_id, conn in self._robots.items():
                     if conn.is_connected:
-                        ws_state = getattr(conn.websocket, "state", None) if conn.websocket else None
-                        is_closed = (
-                            ws_state == websockets.protocol.State.CLOSED
-                            if ws_state is not None
-                            else not getattr(conn.websocket, "open", True)
-                        )
-
-                        # Mark offline if socket closed or heartbeat timed out (>10s)
-                        if is_closed or (conn.last_heartbeat and (now - conn.last_heartbeat > timeout)):
-                            logger.warning(
-                                f"Robot {conn.robot_name} connection lost or timed out "
-                                f"(last heartbeat: {conn.last_heartbeat})"
+                        if conn.websocket is not None:
+                            ws_state = getattr(conn.websocket, "state", None)
+                            is_closed = (
+                                ws_state == websockets.protocol.State.CLOSED
+                                if ws_state is not None
+                                else not getattr(conn.websocket, "open", True)
                             )
-                            conn.is_connected = False
-                            conn.status = "OFFLINE"
-                            await self._close_websocket(conn)
-                            self._schedule_reconnect(robot_id)
+                            if is_closed or (conn.last_heartbeat and (now - conn.last_heartbeat > timeout)):
+                                logger.warning(
+                                    f"Robot {conn.robot_name} connection lost or timed out "
+                                    f"(last heartbeat: {conn.last_heartbeat})"
+                                )
+                                conn.is_connected = False
+                                conn.status = "OFFLINE"
+                                await self._close_websocket(conn)
+                                self._schedule_reconnect(robot_id)
+                        else:
+                            # For non-websocket robots (e.g. Zumo micro-ROS over UDP)
+                            if conn.last_heartbeat is None or (now - conn.last_heartbeat > timedelta(seconds=3.0)):
+                                conn.is_connected = False
+                                conn.status = "OFFLINE"
 
             except asyncio.CancelledError:
                 break
