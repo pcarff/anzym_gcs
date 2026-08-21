@@ -8,14 +8,14 @@ An enterprise multi-robot fleet management, spatial mapping, teleoperation, and 
 
 ## Key Features
 
-- **Multi-Robot Fleet Monitoring**: Live status tracking (`ONLINE`, `BUSY`, `OFFLINE`), battery telemetry, odometry position, and zero-latency heartbeat monitoring across heterogeneous fleets (NVIDIA Jetson RosOrin differential AMRs, Yahboom ROSMaster X3 Plus 4WD Mecanum AMRs).
-- **Custom Vehicle Telemetry**: Native support for `/battery_state` (`sensor_msgs/msg/BatteryState`) and `gcs_interfaces/msg/VehicleBaselineStatus` — battery voltage, state of charge, link quality (RSSI, jitter, packet loss), flight modes, safety flags, and RTK lock status.
-- **Zero-Latency Dual-Mode Teleoperation**: Dual-mode Joystick teleoperation (`LOCAL` direct vs. `GCS_REMOTE` over rosbridge WebSocket) supporting both 2-DOF differential drive and 3-DOF Holonomic Mecanum (forward/back, lateral strafe, yaw rotation) with integrated safety watchdog failsafes.
+- **Multi-Robot Fleet Monitoring**: Live status tracking (`ONLINE`, `BUSY`, `OFFLINE`), battery telemetry, odometry position, and zero-latency heartbeat monitoring across heterogeneous fleets (NVIDIA Jetson RosOrin differential AMRs, Yahboom ROSMaster X3 Plus 4WD Mecanum AMRs, and Arduino UNO R4 WiFi Pololu Zumo micro-AMRs).
+- **Custom Vehicle Telemetry & micro-ROS**: Native support for `/battery_state` (`sensor_msgs/msg/BatteryState`), `gcs_interfaces/msg/VehicleBaselineStatus`, and micro-ROS UDP `/zt` battery and motor telemetry streams.
+- **Zero-Latency Dual-Mode Teleoperation**: Dual-mode Joystick teleoperation (`LOCAL` direct vs. `GCS_REMOTE` over rosbridge WebSocket / micro-ROS UDP) supporting 2-DOF differential drive, 3-DOF Holonomic Mecanum (forward/back, lateral strafe, yaw rotation), and packed 32-bit micro-AMR skid-steer with integrated slew rate smoothing and failsafes.
 - **Ultra-Low Latency Video Streaming**: Primary WebRTC streaming via WHEP (MediaMTX on port 8889, `<200ms` latency) with automatic fallback to HTTP MJPEG (`web_video_server` on port 8080).
 - **Interactive LiDAR & Spatial Mapping**: 2D LaserScan visualization canvas with mouse wheel zoom (40% to 500%), click-and-drag pan, and navigation waypoint targeting.
 - **Foxglove Studio 3D Integration**: 1-click launcher for host desktop Foxglove Studio (`foxglove://` deep links) with standard `rosbridge-websocket` protocol support and pre-configured 3D LiDAR layouts (`/api/foxglove-lidar-layout.json`).
 - **Live Topic Echo Inspector**: Real-time ROS2 message inspector for `/scan`, `/odom`, `/tf`, `/tf_static`, `/battery_state`, `/vehicle/baseline_status`, `/cmd_vel`, `/teleop_mode_status`, and custom topics.
-- **Template & Plugin Architecture**: Dynamic YAML template-driven platform instantiation system for Jetson Orin AMRs (`anzym_rosorin`), Yahboom ROSMaster X3 Plus Mecanum AMRs (`anzym_x3` / `anzym_x3_plus`), and Micro-AMRs (`anzym_zumo`).
+- **Template & Plugin Architecture**: Dynamic YAML template-driven platform instantiation system for Jetson Orin AMRs (`anzym_rosorin`), Yahboom ROSMaster X3 Plus Mecanum AMRs (`anzym_x3` / `anzym_x3_plus`), and micro-ROS Pololu Zumos (`anzym_zumo`).
 
 ---
 

@@ -4,14 +4,19 @@
 
 ```mermaid
 graph TD
-    subgraph "AMR Fleet (ROS2 HUMBLE)"
-        R1["RosOrin-Alpha<br/>(Differential AMR<br/>rosbridge:9090 | web_video:8080)"]
-        R2["AnZym-Green-X3<br/>(4WD Mecanum + 6-DOF Arm<br/>rosbridge:9090 | mediamtx:8889)"]
-        R3["AnZym-Zumo<br/>(Micro Tracked AMR<br/>rosbridge:9090)"]
+    subgraph "AMR & Micro-Robot Fleet"
+        R1["RosOrin-Alpha<br/>(Differential AMR - Jetson Orin<br/>rosbridge:9090 | web_video:8080)"]
+        R2["AnZym-Green-X3<br/>(4WD Mecanum + 6-DOF Arm - Horizon X3<br/>rosbridge:9090 | mediamtx:8889)"]
+        R3["AnZym-Zumo<br/>(Micro Tracked Robot - Arduino UNO R4 WiFi<br/>micro-ROS UDP:8888 | DRV8835)"]
     end
 
-    subgraph "Network Boundary"
-        WiFi["Wi-Fi / LAN Network<br/>(CycloneDDS Domain 42)"]
+    subgraph "Network Layer"
+        WiFi["Wi-Fi / LAN Network (2.4 GHz & 5 GHz)"]
+    end
+
+    subgraph "GCS Micro-ROS & Bridge Layer"
+        M_AGENT["micro-ROS Agent Daemon<br/>(microros/micro-ros-agent:humble<br/>UDP :8888 | FastDDS Domain 0)"]
+        Z_BRIDGE["AnZym Zumo Bridge Node<br/>(Redis Sub -> Int32 /cmd_vel<br/>Float32MultiArray /zt -> Redis/Battery)"]
     end
 
     subgraph "GCS Backend Infrastructure"
@@ -19,7 +24,7 @@ graph TD
             WS["ROSbridge Manager<br/>(Multi-robot WS clients)"]
             API["REST API<br/>(/api/robots, /api/templates)"]
             TELEM["Telemetry Service<br/>(Redis Streams + InfluxDB)"]
-            HB["Heartbeat Monitor<br/>(10s timeout, auto-reconnect)"]
+            HB["Heartbeat Watchdog<br/>(WS + micro-ROS UDP packet monitor)"]
             MC["Mission Controller<br/>(Nav2 Action Dispatcher)"]
             TM["Template Manager<br/>(Dynamic YAML Registry)"]
             ESTOP["E-Stop Handler"]
@@ -38,16 +43,22 @@ graph TD
         MAP["MapCanvas<br/>(2D LaserScan + Foxglove 3D)"]
         DIAG["Diagnostics & Telemetry"]
         MISSION["Mission Control"]
-        WS_CLIENT["Fleet WebSocket Client<br/>(/ws/fleet)"]
+        WS_CLIENT["Fleet WebSocket Client<br/>(/api/fleet/ws)"]
         VIDEO["WebRTC / MJPEG Player<br/>(WHEP:8889 / MJPEG:8080)"]
-        TELEOP["Gamepad Teleop<br/>(Differential & Mecanum 3-DOF)"]
+        TELEOP["Gamepad Teleop<br/>(Differential, Mecanum, Skid-Steer)"]
     end
 
-    %% Data Flow: Robot -> Backend
+    %% Data Flow: Robots -> Backend
     R1 -->|"/battery_state, /scan, /odom, /tf"| WiFi
     R2 -->|"/battery_state, /scan, /odom, /tf, /teleop_mode_status"| WiFi
-    R3 -->|"/battery_state, /scan, /tf"| WiFi
     WiFi -->|"WebSocket (rosbridge JSON :9090)"| WS
+
+    %% Zumo Flow
+    R3 -->|"micro-ROS UDP /zt (Batt mV, Motor Speeds)"| WiFi
+    WiFi -->|"UDP :8888"| M_AGENT
+    M_AGENT -->|"/zt (Float32MultiArray)"| Z_BRIDGE
+    Z_BRIDGE -->|"gcs:realtime:telemetry + Battery"| REDIS
+    HB -->|"UDP Packet Check (docker logs)"| M_AGENT
 
     WS -->|"Raw ROS messages"| TELEM
     TELEM -->|"Parsed telemetry"| INFLUX
@@ -57,9 +68,12 @@ graph TD
 
     %% Teleop Flow
     TELEOP -->|"linearX, linearY, angularZ"| WS_CLIENT
-    WS_CLIENT -->|"teleop_cmd (/gcs/cmd_vel)"| WS
-    WS -->|"/gcs/cmd_vel (Twist)"| WiFi
-    WiFi -->|"teleop_mode_switcher"| R2
+    WS_CLIENT -->|"teleop_cmd"| API
+    API -->|"rosbridge.publish(/gcs/cmd_vel)"| WS
+    API -->|"Redis Pub ('gcs:zumo:cmd_vel')"| REDIS
+    REDIS -->|"gcs:zumo:cmd_vel"| Z_BRIDGE
+    Z_BRIDGE -->|"/cmd_vel (std_msgs/msg/Int32 Packed)"| M_AGENT
+    M_AGENT -->|"UDP :8888 -> DRV8835"| R3
 
     %% Redis -> Frontend
     REDIS -->|"Fleet telemetry stream"| WS_CLIENT
@@ -460,3 +474,59 @@ To support advanced autonomous robotics operations, the GCS Mapping section is a
 ### 4.3 Nav2 Autonomous Path & Action Dispatch
 - **Action Server**: GCS backend dispatches Nav2 goals directly to `nav2_msgs/action/NavigateToPose` or `nav2_msgs/action/NavigateThroughPoses`.
 - **Planned Path Rendering**: Subscribes to `nav_msgs/msg/Path` on `/plan` to render real-time planned trajectory vectors and waypoint goal indicators.
+
+---
+
+## 5. AnZym Zumo Micro-ROS System Integration & Control Architecture
+
+The **AnZym Zumo** is a tracked micro-AMR operating exclusively via Wi-Fi GCS teleoperation, powered by an **Arduino UNO R4 WiFi** (Renesas RA4M1 48MHz + ESP32-S3 Wi-Fi co-processor) and a **Pololu Zumo Shield v1.2** with a Texas Instruments **DRV8835** dual motor driver.
+
+### 5.1 Communication Pipeline & Network Protocol
+
+```text
+┌────────────────────────┐      UDP :8888       ┌────────────────────────┐
+│  AnZym Zumo Robot      │ ◄──────────────────► │  micro-ROS Agent       │
+│  (Arduino UNO R4 WiFi) │  (Wi-Fi 2.4 GHz)     │  (Docker Daemon :8888) │
+└────────────────────────┘                      └───────────┬────────────┘
+                                                            │ FastDDS Domain 0
+                                                ┌───────────▼────────────┐
+                                                │  Zumo GCS Bridge Node  │
+                                                │  (FastDDS Domain 0)    │
+                                                └───────────▲────────────┘
+                                                            │ Redis Pub/Sub
+                                                ┌───────────┴────────────┐
+                                                │  GCS FastAPI Backend   │
+                                                │  (/api/fleet/ws)       │
+                                                └───────────▲────────────┘
+                                                            │ WebSocket JSON
+                                                ┌───────────┴────────────┐
+                                                │  GCS React Frontend    │
+                                                │  (Dashboard Gamepad)   │
+                                                └────────────────────────┘
+```
+
+### 5.2 Micro-ROS Topics & Message Specifications
+
+| Topic | Type | Direction | QoS | Frequency | Description |
+|:---|:---|:---|:---|:---|:---|
+| `/cmd_vel` | `std_msgs/msg/Int32` | GCS $\rightarrow$ Zumo | `BEST_EFFORT` | 20 Hz | Packed 32-bit integer containing 16-bit steering & 16-bit throttle. |
+| `/zt` | `std_msgs/msg/Float32MultiArray` | Zumo $\rightarrow$ GCS | `BEST_EFFORT` | 10 Hz | `[battery_mv, current_left_speed, current_right_speed]` telemetry. |
+| `/zumo/battery_state` | `sensor_msgs/msg/BatteryState` | Bridge $\rightarrow$ GCS | `RELIABLE` | 10 Hz | Standard ROS2 battery percentage and voltage for fleet monitor. |
+
+### 5.3 Packed 32-Bit Motor Control Protocol
+
+To eliminate serialization overhead and dynamic heap allocations on the embedded microcontroller, motor commands are bit-packed into a single 32-bit integer:
+
+$$\text{Packed Int32} = (\text{Steering}_{16} \ll 16) \mid (\text{Throttle}_{16} \ \& \ \text{0xFFFF})$$
+
+- **Throttle** (Bits 0–15): Signed 16-bit integer ($-255$ to $+255$).
+- **Steering** (Bits 16–31): Signed 16-bit integer ($-255$ to $+255$).
+- **Onboard Unpacking & Motor Mixing**:
+  $$\text{Left Motor Speed} = \text{constrain}(\text{Throttle} - \text{Steering}, -255, 255)$$
+  $$\text{Right Motor Speed} = \text{constrain}(\text{Throttle} + \text{Steering}, -255, 255)$$
+
+### 5.4 Safety Watchdogs & Slew Rate Smoothing
+1. **Bridge Slew Rate Limiter**: Ramps motor throttle and steering across $\pm 35\text{ PWM/step}$ at 20 Hz to protect mechanical gears and prevent current spikes.
+2. **Bridge 1.0s Watchdog**: Automatically zeroes velocity targets if gamepad commands cease for $>1.0\text{s}$.
+3. **Onboard 2.0s Failsafe**: The Arduino microcontroller automatically cuts PWM outputs to zero if no micro-ROS UDP packets arrive for $>2.0\text{s}$.
+4. **Backend UDP Packet Watchdog**: GCS backend inspects live micro-ROS agent UDP packet reception timestamps and marks the robot `ONLINE` or `OFFLINE` dynamically with a 3.5s timeout.
