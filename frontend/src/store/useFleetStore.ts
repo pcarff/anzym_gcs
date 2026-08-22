@@ -20,6 +20,15 @@ interface FleetStore extends FleetState {
   updateRobotDiagnostics: (robotId: string, diagnostics: any[]) => void;
   updateRobotScan: (robotId: string, scan: any) => void;
 
+  // Navigation & Missions
+  activeNavGoal: { x: number; y: number; theta: number; robotId: string } | null;
+  plannedPath: Array<{ x: number; y: number }>;
+  navStatus: 'IDLE' | 'PLANNING' | 'NAVIGATING' | 'ARRIVED' | 'FAILED';
+  sendNavGoal: (robotId: string, x: number, y: number, theta?: number) => Promise<boolean>;
+  cancelNavGoal: (robotId: string) => Promise<boolean>;
+  setPlannedPath: (path: Array<{ x: number; y: number }>) => void;
+  setNavStatus: (status: 'IDLE' | 'PLANNING' | 'NAVIGATING' | 'ARRIVED' | 'FAILED') => void;
+
   setSelectedRobotId: (robotId?: string) => void;
   setActiveMissionId: (missionId?: number) => void;
 
@@ -54,6 +63,11 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
   missions: [],
   selectedMapType: '2D',
   isConnected: false,
+
+  // Navigation State
+  activeNavGoal: null,
+  plannedPath: [],
+  navStatus: 'IDLE',
 
   // Robot actions
   setRobots: (robots) => set({ robots }),
@@ -170,6 +184,50 @@ export const useFleetStore = create<FleetStore>((set, get) => ({
 
   // Map type
   setSelectedMapType: (selectedMapType) => set({ selectedMapType }),
+
+  // Navigation Actions
+  setPlannedPath: (plannedPath) => set({ plannedPath }),
+  setNavStatus: (navStatus) => set({ navStatus }),
+
+  sendNavGoal: async (robotId, x, y, theta = 0) => {
+    set({
+      activeNavGoal: { x, y, theta, robotId },
+      navStatus: 'NAVIGATING',
+    });
+
+    try {
+      const response = await fetch(`/api/robots/${robotId}/goal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x, y, theta, frame_id: 'map' }),
+      });
+      if (!response.ok) throw new Error('Failed to send goal');
+      return true;
+    } catch (error) {
+      console.error('[FleetStore] Failed to send navigation goal:', error);
+      set({ navStatus: 'FAILED' });
+      return false;
+    }
+  },
+
+  cancelNavGoal: async (robotId) => {
+    set({
+      activeNavGoal: null,
+      plannedPath: [],
+      navStatus: 'IDLE',
+    });
+
+    try {
+      const response = await fetch(`/api/robots/${robotId}/cancel_goal`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Failed to cancel goal');
+      return true;
+    } catch (error) {
+      console.error('[FleetStore] Failed to cancel navigation goal:', error);
+      return false;
+    }
+  },
 
   setTeleopMode: async (robotId, mode) => {
     // Set mode immediately in local store so React effects trigger without delay
@@ -357,6 +415,23 @@ function handleWebSocketMessage(message: any, store: FleetStore) {
     case 'mission_update': {
       const { mission_id, ...updates } = message.data;
       store.updateMission(mission_id, updates);
+      break;
+    }
+
+    case 'nav_status': {
+      if (message.data?.status) {
+        store.setNavStatus(message.data.status);
+      }
+      if (message.data?.goal === null) {
+        store.setPlannedPath([]);
+      }
+      break;
+    }
+
+    case 'plan_update': {
+      if (Array.isArray(message.data?.path)) {
+        store.setPlannedPath(message.data.path);
+      }
       break;
     }
 

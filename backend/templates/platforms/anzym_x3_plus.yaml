@@ -9,6 +9,7 @@ recommended_plugins:
   - foxglove_visualizer
   - lidar_2d_3d
   - gamepad_teleop
+  - navigation_nav2
 capabilities:
   has_camera: true
   has_lidar: true

@@ -1,0 +1,62 @@
+id: navigation_nav2
+name: Nav2 Autonomous Navigation & SLAM
+version: 1.0.0
+description: Autonomous path planning, obstacle avoidance costmaps, and waypoint dispatch using ROS 2 Nav2.
+category: navigation
+tags:
+  - nav2
+  - slam
+  - path_planning
+  - waypoints
+
+topics:
+  publishers:
+    - topic: /goal_pose
+      type: geometry_msgs/msg/PoseStamped
+      rate: on_demand
+      description: Target navigation goal pose with position (X,Y) and orientation quaternion
+    - topic: /initialpose
+      type: geometry_msgs/msg/PoseWithCovarianceStamped
+      rate: on_demand
+      description: Initial robot pose estimate for AMCL localization
+  subscribers:
+    - topic: /plan
+      type: nav_msgs/msg/Path
+      rate: 5
+      description: Global planned trajectory vector from Nav2 planner server
+    - topic: /map
+      type: nav_msgs/msg/OccupancyGrid
+      rate: 1
+      description: 2D static or SLAM occupancy grid map
+    - topic: /global_costmap/costmap
+      type: nav_msgs/msg/OccupancyGrid
+      rate: 1
+      description: Inflated global obstacle costmap
+    - topic: /local_costmap/costmap
+      type: nav_msgs/msg/OccupancyGrid
+      rate: 2
+      description: Dynamic local obstacle avoidance costmap
+
+actions:
+  - name: /navigate_to_pose
+    type: nav2_msgs/action/NavigateToPose
+    description: High-level action for single goal pose navigation with behavior trees
+  - name: /navigate_through_poses
+    type: nav2_msgs/action/NavigateThroughPoses
+    description: Sequential waypoint mission navigation
+
+config_schema:
+  planner_plugin:
+    type: string
+    default: "GridBased"
+    options: ["GridBased", "SmacPlanner2D", "SmacPlannerHybrid"]
+  controller_plugin:
+    type: string
+    default: "FollowPath"
+    options: ["FollowPath", "RegulatedPurePursuit", "MPPI"]
+  max_linear_velocity:
+    type: float
+    default: 0.5
+  max_angular_velocity:
+    type: float
+    default: 1.0

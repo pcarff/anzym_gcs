@@ -455,6 +455,53 @@ async def send_goal(robot_id: str, request: GoalRequest):
     return {"status": "goal_sent", "goal": request.model_dump()}
 
 
+@app.post("/api/robots/{robot_id}/cancel_goal")
+async def cancel_goal(robot_id: str):
+    """Cancel any active navigation goal on a robot."""
+    if not rosbridge_manager:
+        raise HTTPException(status_code=503, detail="Service not initialized")
+
+    conn = rosbridge_manager.active_robots.get(robot_id)
+    if not conn or not conn.is_connected:
+        raise HTTPException(status_code=404, detail="Robot not found or not connected")
+
+    # 1. Publish zero velocity to halt immediate motion
+    stop_msg = {
+        "op": "publish",
+        "topic": "/cmd_vel",
+        "msg": {
+            "linear": {"x": 0.0, "y": 0.0, "z": 0.0},
+            "angular": {"x": 0.0, "y": 0.0, "z": 0.0},
+        },
+    }
+    await rosbridge_manager.send_message(robot_id, stop_msg)
+
+    # 2. Publish cancel message if nav2 action goal is active or cancel topic is present
+    cancel_msg = {
+        "op": "publish",
+        "topic": "/navigate_to_pose/_action/cancel_goal",
+        "msg": {
+            "goal_info": {
+                "goal_id": {"uuid": [0] * 16},
+                "stamp": {"sec": 0, "nanosec": 0}
+            }
+        }
+    }
+    await rosbridge_manager.send_message(robot_id, cancel_msg)
+
+    # 3. Broadcast navigation state update to all UI clients
+    connection_manager.broadcast({
+        "type": "nav_status",
+        "data": {
+            "robot_id": robot_id,
+            "status": "IDLE",
+            "goal": None
+        }
+    })
+
+    return {"status": "goal_cancelled", "robot_id": robot_id}
+
+
 @app.post("/api/robots/{robot_id}/e-stop")
 async def emergency_stop(robot_id: str, request: EStopRequest):
     """Trigger emergency stop on a robot."""
