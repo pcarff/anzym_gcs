@@ -18,12 +18,15 @@ class TemplateManager:
 
     def __init__(self, templates_dir: Optional[str] = None):
         if templates_dir is None:
-            # Default to backend/templates directory in anzym_gcs_ws, falling back to anzym_green
+            # Default to backend/templates directory in anzym_gcs_ws, falling back to workspace anzym_green
             gcs_templates = Path(__file__).resolve().parent.parent.parent / "templates"
+            workspace_templates = Path(__file__).resolve().parents[4] / "anzym_green" / "templates"
             if gcs_templates.exists():
                 templates_dir = str(gcs_templates)
+            elif workspace_templates.exists():
+                templates_dir = str(workspace_templates)
             else:
-                templates_dir = "/home/pcarff/Workspaces/anzym_green/templates"
+                templates_dir = str(gcs_templates)
 
         self.templates_dir = Path(templates_dir)
         self.baseline_dir = self.templates_dir / "baseline"
