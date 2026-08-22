@@ -392,6 +392,7 @@ async def start_mission(mission_id: int):
     goal_msg = {
         "op": "publish",
         "topic": "/goal_pose",
+        "type": "geometry_msgs/msg/PoseStamped",
         "msg": {
             "header": {"frame_id": "map"},
             "pose": {
@@ -430,6 +431,7 @@ async def send_goal(robot_id: str, request: GoalRequest):
     goal_msg = {
         "op": "publish",
         "topic": "/goal_pose",
+        "type": "geometry_msgs/msg/PoseStamped",
         "msg": {
             "header": {"frame_id": request.frame_id},
             "pose": {
