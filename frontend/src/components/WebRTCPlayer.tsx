@@ -24,7 +24,9 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
   videoPort = 8080,
   webrtcPort = 8889,
 }) => {
-  const [streamMode, setStreamMode] = useState<'webrtc' | 'mjpeg'>('webrtc');
+  const [streamMode, setStreamMode] = useState<'webrtc' | 'mjpeg'>(
+    platformType === 'anzym_rosorin' ? 'mjpeg' : 'webrtc'
+  );
   const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'error' | 'disconnected'>('connecting');
   const [retryCount, setRetryCount] = useState(0);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
@@ -85,7 +87,8 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
           setConnectionState('connected');
         } else if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-          setConnectionState('error');
+          setStreamMode('mjpeg');
+          setConnectionState('connected');
         }
       };
 
@@ -129,8 +132,9 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         sdp: answerSdp,
       }));
     } catch (err) {
-      console.warn('[WebRTC] WHEP connection failed, falling back to MJPEG if needed:', err);
-      setConnectionState('error');
+      console.warn('[WebRTC] WHEP connection failed, falling back to MJPEG:', err);
+      setStreamMode('mjpeg');
+      setConnectionState('connected');
     }
   }, [effectiveHost, isRobotOnline, whepUrl, stopWebRTC]);
 

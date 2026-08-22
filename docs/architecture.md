@@ -459,20 +459,26 @@ rosbridge_config:
 }
 ```
 
-## 4. Future Spatial Mapping, LiDAR & Nav2 Integration Roadmap
+## 4. Spatial Mapping, LiDAR & Nav2 Autonomous Navigation Pipeline
 
-To support advanced autonomous robotics operations, the GCS Mapping section is architected for phased spatial visualization as SLAM and Nav2 navigation suites are deployed on fleet platforms.
+To support advanced autonomous robotics operations, the GCS Mapping and Navigation suite integrates real-time laser scanning, SLAM costmaps, and Nav2 action dispatch:
 
 ### 4.1 LiDAR LaserScan & PointCloud Stream Pipeline
-- **2D LaserScan (`/scan`)**: Rendered directly on the `MapCanvas` 2D view as point clusters relative to the robot TF frame `base_link`.
-- **3D PointCloud2 (`/points2`)**: High-bandwidth point cloud streams are routed over `foxglove_bridge` (port 8765) using binary CDR encoding, bypassing JSON rosbridge serialization overhead.
+- **2D LaserScan (`/scan`)**: Rendered directly on the `MapCanvas` 2D view as point clusters relative to the robot TF frame `base_link` or `base_footprint`.
+- **3D PointCloud2 (`/depth_cam/depth0/points`)**: High-bandwidth point cloud streams routed over `foxglove_bridge` (port 8765) using binary CDR encoding, bypassing JSON rosbridge serialization overhead.
 
 ### 4.2 Nav2 OccupancyGrid & Costmap Visualization
-- **Global SLAM Map (`/map`)**: Ingested as a 2D `nav_msgs/msg/OccupancyGrid` PNG/PGM asset or WebP tile stream, rendered as the base background layer in `MapCanvas` and Foxglove.
-- **Dynamic Costmaps (`/global_costmap/costmap`, `/local_costmap/costmap`)**: Rendered as semi-transparent heatmaps indicating static/dynamic obstacle inflation zones around the robot.
+- **Global SLAM Map (`/map`)**: Ingested as a 2D `nav_msgs/msg/OccupancyGrid` from `slam_toolbox` or static map servers, rendered as the base background layer in `MapCanvas` and Foxglove.
+- **Dynamic Costmaps (`/global_costmap/costmap_raw`, `/local_costmap/costmap_raw`)**: Real-time inflation layers representing static and dynamic obstacles detected by 2D LiDAR.
 
-### 4.3 Nav2 Autonomous Path & Action Dispatch
-- **Action Server**: GCS backend dispatches Nav2 goals directly to `nav2_msgs/action/NavigateToPose` or `nav2_msgs/action/NavigateThroughPoses`.
+### 4.3 Nav2 Autonomous Path & Action Dispatch Architecture
+- **Goal Pose Dispatch (`/goal_pose` / `NavigateToPose`)**: 
+  - GCS MapCanvas converts screen pixel coordinates to metric coordinates in the `map` TF frame.
+  - REST endpoint `POST /api/robots/{robot_id}/goal` publishes `geometry_msgs/msg/PoseStamped` to `/goal_pose` via rosbridge with valid timestamps and orientation quaternions.
+- **Goal Cancellation & Emergency Stop (`/api/robots/{robot_id}/cancel_goal`)**:
+  - GCS issues an immediate zero-velocity command to `/cmd_vel` to halt physical motion.
+  - GCS calls the Nav2 action server cancel service `action_msgs/srv/CancelGoal` at `/navigate_to_pose/_action/cancel_goal` via rosbridge `call_service` (with all-zero UUID to cancel all active goals).
+  - GCS broadcasts `nav_status: IDLE` to all connected frontend clients.
 - **Planned Path Rendering**: Subscribes to `nav_msgs/msg/Path` on `/plan` to render real-time planned trajectory vectors and waypoint goal indicators.
 
 ---

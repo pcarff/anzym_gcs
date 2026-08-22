@@ -433,7 +433,10 @@ async def send_goal(robot_id: str, request: GoalRequest):
         "topic": "/goal_pose",
         "type": "geometry_msgs/msg/PoseStamped",
         "msg": {
-            "header": {"frame_id": request.frame_id},
+            "header": {
+                "stamp": {"sec": 0, "nanosec": 0},
+                "frame_id": request.frame_id,
+            },
             "pose": {
                 "position": {
                     "x": request.x,
@@ -478,11 +481,14 @@ async def cancel_goal(robot_id: str):
     }
     await rosbridge_manager.send_message(robot_id, stop_msg)
 
-    # 2. Publish cancel message if nav2 action goal is active or cancel topic is present
+    # 2. Cancel Nav2 action goal via rosbridge service call
+    #    The action server exposes a cancel service at /navigate_to_pose/_action/cancel_goal
+    #    All-zero UUID + zero stamp = cancel ALL active goals
     cancel_msg = {
-        "op": "publish",
-        "topic": "/navigate_to_pose/_action/cancel_goal",
-        "msg": {
+        "op": "call_service",
+        "service": "/navigate_to_pose/_action/cancel_goal",
+        "type": "action_msgs/srv/CancelGoal",
+        "args": {
             "goal_info": {
                 "goal_id": {"uuid": [0] * 16},
                 "stamp": {"sec": 0, "nanosec": 0}
