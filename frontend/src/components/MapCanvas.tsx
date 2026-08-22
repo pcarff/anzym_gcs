@@ -34,6 +34,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [hoverWorldPos, setHoverWorldPos] = useState<{ x: number; y: number } | null>(null);
 
   // Interactive Goal Dragging State
   const [navTargetDrag, setNavTargetDrag] = useState<{
@@ -45,6 +46,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
   } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const robots = useFleetStore((state) => state.robots);
   const selectedRobotId = useFleetStore((state) => state.selectedRobotId);
   const activeNavGoal = useFleetStore((state) => state.activeNavGoal);
@@ -55,6 +57,26 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
   const activeRobot = selectedRobotId ? robots[selectedRobotId] : Object.values(robots)[0];
   const hasLidar = activeRobot?.platform_type === 'anzym_rosorin' || activeRobot?.enabled_plugins?.includes('lidar_2d_3d') || true;
+
+  // Auto-resize canvas buffer to match DOM element size 1:1
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+          canvas.width = Math.floor(rect.width);
+          canvas.height = Math.floor(rect.height);
+        }
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, [viewMode]);
 
   // Zoom controls
   const handleZoomIn = () => setZoomLevel((z) => Math.min(5.0, Number((z + 0.25).toFixed(2))));
@@ -69,27 +91,36 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
     setZoomLevel((prev) => Math.max(0.4, Math.min(5.0, Number((prev + zoomDelta).toFixed(2)))));
   };
 
-  // Convert screen coordinates to world coordinates (meters)
-  const screenToWorld = useCallback(
-    (screenX: number, screenY: number) => {
+  // Convert canvas pixel coordinates to world coordinates (meters)
+  const canvasToWorld = useCallback(
+    (canvasX: number, canvasY: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return { x: 0, y: 0 };
       const centerX = canvas.width / 2 + panOffset.x;
       const centerY = canvas.height / 2 + panOffset.y;
-      const worldX = (screenX - centerX) / (zoomLevel * 35.0); // 35 pixels per meter scale
-      const worldY = -(screenY - centerY) / (zoomLevel * 35.0);
+      const worldX = (canvasX - centerX) / (zoomLevel * 35.0); // 35 pixels per meter scale
+      const worldY = -(canvasY - centerY) / (zoomLevel * 35.0);
       return { x: Number(worldX.toFixed(2)), y: Number(worldY.toFixed(2)) };
     },
     [panOffset, zoomLevel]
   );
 
+  // Helper to extract exact canvas internal buffer coordinates from mouse event
+  const getCanvasPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button !== 0) return; // Left click only
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const { x: clickX, y: clickY } = getCanvasPos(e);
 
     if (interactMode === 'pan') {
       setIsDragging(true);
@@ -106,11 +137,9 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    const { x: currentX, y: currentY } = getCanvasPos(e);
+    const worldPos = canvasToWorld(currentX, currentY);
+    setHoverWorldPos(worldPos);
 
     if (interactMode === 'pan' && isDragging) {
       setPanOffset({
@@ -126,8 +155,8 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
     if (interactMode === 'pan') {
       setIsDragging(false);
     } else if (interactMode === 'nav_goal' && navTargetDrag?.isSettingGoal && activeRobot) {
-      const worldStart = screenToWorld(navTargetDrag.startX, navTargetDrag.startY);
-      const worldCurrent = screenToWorld(navTargetDrag.currentX, navTargetDrag.currentY);
+      const worldStart = canvasToWorld(navTargetDrag.startX, navTargetDrag.startY);
+      const worldCurrent = canvasToWorld(navTargetDrag.currentX, navTargetDrag.currentY);
 
       // Compute heading angle from drag vector
       const dx = worldCurrent.x - worldStart.x;
@@ -285,8 +314,8 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
       // 4. Draw Interactive Nav Goal in Progress (Drag preview)
       if (navTargetDrag?.isSettingGoal) {
-        const startWorld = screenToWorld(navTargetDrag.startX, navTargetDrag.startY);
-        const currentWorld = screenToWorld(navTargetDrag.currentX, navTargetDrag.currentY);
+        const startWorld = canvasToWorld(navTargetDrag.startX, navTargetDrag.startY);
+        const currentWorld = canvasToWorld(navTargetDrag.currentX, navTargetDrag.currentY);
         const startScreenX = startWorld.x * pxPerMeter;
         const startScreenY = -startWorld.y * pxPerMeter;
         const currentScreenX = currentWorld.x * pxPerMeter;
@@ -424,7 +453,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
     activeNavGoal,
     plannedPath,
     navTargetDrag,
-    screenToWorld,
+    canvasToWorld,
   ]);
 
   return (
@@ -513,25 +542,26 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
       </div>
 
       {/* Viewport Content */}
-      <div className="relative flex-1 min-h-[420px]">
+      <div ref={containerRef} className="relative flex-1 min-h-[420px] w-full h-full overflow-hidden">
         {viewMode === 'native' ? (
           <div className="relative w-full h-full">
             <canvas
               ref={canvasRef}
-              width={900}
-              height={620}
               onWheel={handleWheel}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              className={`w-full h-full border border-slate-800 rounded-xl shadow-inner bg-slate-950 ${
+              onMouseLeave={() => {
+                setHoverWorldPos(null);
+                handleMouseUp();
+              }}
+              className={`w-full h-full border border-slate-800 rounded-xl shadow-inner bg-slate-950 block ${
                 interactMode === 'nav_goal' ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
               }`}
             />
 
             {/* Info Badge */}
-            <div className="absolute top-4 left-4 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl text-slate-200 text-xs space-y-1.5 shadow-xl">
+            <div className="absolute top-4 left-4 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl text-slate-200 text-xs space-y-1.5 shadow-xl pointer-events-none">
               <div className="font-semibold text-slate-100 flex items-center justify-between gap-4">
                 <span>Active Target: {activeRobot?.name || activeRobot?.id}</span>
                 <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
@@ -544,6 +574,14 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
                 <span className="text-blue-400 font-mono">
                   Pos: ({activeRobot?.position?.x?.toFixed(2) || '0.00'}, {activeRobot?.position?.y?.toFixed(2) || '0.00'})
                 </span>
+                {hoverWorldPos && (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-mono font-semibold">
+                      Cursor: ({hoverWorldPos.x.toFixed(2)}m, {hoverWorldPos.y.toFixed(2)}m)
+                    </span>
+                  </>
+                )}
               </div>
               <div className="text-[10px] text-slate-500 italic pt-1">
                 {interactMode === 'nav_goal'
