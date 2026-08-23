@@ -36,8 +36,9 @@ export function Dashboard() {
   // Gamepad hook
   const gamepad = useGamepad({
     enabled: isRemoteTeleopActive,
+    deadzone: 0.12,
     maxLinear: 0.5,
-    maxAngular: 1.5,
+    maxAngular: 0.4,
   });
 
   const gamepadRef = useRef(gamepad);

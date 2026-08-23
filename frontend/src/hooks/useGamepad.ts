@@ -37,8 +37,14 @@ export function useGamepad(options: UseGamepadOptions = {}) {
     buttons: [],
   });
 
-  const applyDeadzone = (value: number): number => {
-    return Math.abs(value) < deadzone ? 0 : value;
+  const applyDeadzoneAndCurve = (value: number, cubic: boolean = false): number => {
+    if (Math.abs(value) < deadzone) return 0;
+    const sign = value > 0 ? 1 : -1;
+    let normalized = (Math.abs(value) - deadzone) / (1.0 - deadzone);
+    if (cubic) {
+      normalized = Math.pow(normalized, 3);
+    }
+    return sign * normalized;
   };
 
   useEffect(() => {
@@ -65,10 +71,11 @@ export function useGamepad(options: UseGamepadOptions = {}) {
         // Standard Gamepad Axis Mapping:
         // Axis 0: Left Stick X (strafe)
         // Axis 1: Left Stick Y (forward/backward - inverted)
-        // Axis 2: Right Stick X (rotation/steering)
-        const lx = applyDeadzone(-activeGp.axes[1] || 0); // Inverted so stick up = positive linear.x
-        const ly = applyDeadzone(activeGp.axes[0] || 0);  // Strafe left/right
-        const az = applyDeadzone(-activeGp.axes[2] || -activeGp.axes[3] || 0); // Rotation
+        // Axis 2 / 3: Right Stick X (rotation/steering)
+        const lx = applyDeadzoneAndCurve(-activeGp.axes[1] || 0, false); // Inverted so stick up = positive linear.x
+        const ly = applyDeadzoneAndCurve(activeGp.axes[0] || 0, false);  // Strafe left/right
+        const rawAz = -activeGp.axes[2] || -activeGp.axes[3] || 0;
+        const az = applyDeadzoneAndCurve(rawAz, true); // Cubic smoothing for smooth rotation
 
         setGamepadState({
           connected: true,
