@@ -649,7 +649,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         ) : (
           <FoxgloveCanvas
             robotHost={selectedRobotHost}
-            foxglovePort={9090}
+            foxglovePort={8765}
             layoutPreset="amr_3d_monitoring"
             robotName={activeRobot?.name || 'anzym_rosorin_01'}
           />

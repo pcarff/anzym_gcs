@@ -10,15 +10,15 @@ interface FoxgloveCanvasProps {
 
 export const FoxgloveCanvas: React.FC<FoxgloveCanvasProps> = ({
   robotHost = '192.168.8.162',
-  foxglovePort = 9090,
+  foxglovePort = 8765,
   layoutPreset = 'amr_3d_monitoring',
   robotName = 'rosorin-01',
 }) => {
   const [copied, setCopied] = useState(false);
   const foxgloveWsUrl = `ws://${robotHost}:${foxglovePort}`;
   const layoutUrl = 'http://localhost:8000/api/foxglove-lidar-layout.json';
-  const foxgloveAppUrl = `foxglove://open?ds=rosbridge-websocket&ds.url=${encodeURIComponent(foxgloveWsUrl)}&layoutUrl=${encodeURIComponent(layoutUrl)}`;
-  const foxgloveStudioWebUrl = `https://studio.foxglove.dev/?ds=rosbridge-websocket&ds.url=${encodeURIComponent(foxgloveWsUrl)}&layoutUrl=${encodeURIComponent(layoutUrl)}`;
+  const foxgloveAppUrl = `foxglove://open?ds=foxglove-websocket&ds.url=${encodeURIComponent(foxgloveWsUrl)}&layoutUrl=${encodeURIComponent(layoutUrl)}`;
+  const foxgloveStudioWebUrl = `https://studio.foxglove.dev/?ds=foxglove-websocket&ds.url=${encodeURIComponent(foxgloveWsUrl)}&layoutUrl=${encodeURIComponent(layoutUrl)}`;
 
   const handleLaunchDesktopApp = () => {
     window.location.href = foxgloveAppUrl;
