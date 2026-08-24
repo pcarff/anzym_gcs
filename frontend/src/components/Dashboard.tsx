@@ -38,7 +38,7 @@ export function Dashboard() {
     enabled: isRemoteTeleopActive,
     deadzone: 0.12,
     maxLinear: 0.5,
-    maxAngular: 0.4,
+    maxAngular: 0.85,
   });
 
   const gamepadRef = useRef(gamepad);
