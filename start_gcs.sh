@@ -205,12 +205,11 @@ start_services() {
 
     # Launch uvicorn fully detached
     setsid nohup bash -c "
-        source '${BACKEND_VENV}/bin/activate'
         export REDIS_HOST=localhost
         export POSTGRES_HOST=localhost
         export INFLUXDB_URL=http://localhost:8086
         export MINIO_ENDPOINT=localhost:9000
-        exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        exec '${BACKEND_VENV}/bin/python3' -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     " > "${SCRIPT_DIR}/logs/backend.log" 2>&1 &
     echo $! > "${BACKEND_PID_FILE}"
 
