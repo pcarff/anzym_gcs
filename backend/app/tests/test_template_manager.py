@@ -1,6 +1,7 @@
 import unittest
-from pathlib import Path
+
 from app.services.template_manager import TemplateManager
+
 
 class TestTemplateManager(unittest.TestCase):
     def setUp(self):
@@ -38,7 +39,7 @@ class TestTemplateManager(unittest.TestCase):
             robot_name="AnZym-Green-X3",
             host="192.168.8.246",
             port=9090,
-            selected_plugins=["video_webrtc", "foxglove_visualizer", "lidar_2d_3d", "gamepad_teleop"]
+            selected_plugins=["video_webrtc", "foxglove_visualizer", "lidar_2d_3d", "gamepad_teleop"],
         )
         self.assertEqual(config["robot_id"], "x3-01")
         self.assertEqual(config["robot_name"], "AnZym-Green-X3")
@@ -50,6 +51,7 @@ class TestTemplateManager(unittest.TestCase):
         self.assertIn("video_webrtc", config["enabled_plugins"])
         self.assertIn("video_webrtc", config["plugin_configs"])
         self.assertIn("foxglove_visualizer", config["plugin_configs"])
+
 
 if __name__ == "__main__":
     unittest.main()

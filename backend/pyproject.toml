@@ -40,8 +40,10 @@ target-version = "py311"
 line-length = 120
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
+pythonpath = ["."]
+testpaths = ["app/tests"]
+addopts = "-p no:launch_testing_ros_pytest_entrypoint -p no:launch-testing-ros -p no:launch-testing -p no:ament_xmllint -p no:ament_copyright -p no:ament_lint -p no:ament_flake8 -p no:ament_pep257"
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
