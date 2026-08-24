@@ -46,16 +46,31 @@ export function Dashboard() {
     gamepadRef.current = gamepad;
   }, [gamepad]);
 
-  // Stream gamepad velocity commands to robot when GCS Remote mode is active (10Hz heartbeat)
+  // Stream gamepad velocity commands to robot when GCS Remote mode is active
   useEffect(() => {
     if (!isRemoteTeleopActive || !selectedRobotId) return;
+
+    let wasMoving = false;
+    let stopCount = 0;
 
     const interval = setInterval(() => {
       const gp = gamepadRef.current;
       const linearX = gp.connected ? gp.velocity.linearX : 0;
       const linearY = gp.connected ? gp.velocity.linearY : 0;
       const angularZ = gp.connected ? gp.velocity.angularZ : 0;
-      sendTwistCommand(selectedRobotId, linearX, linearY, angularZ);
+      const isMoving = Math.abs(linearX) > 0.01 || Math.abs(linearY) > 0.01 || Math.abs(angularZ) > 0.01;
+
+      if (isMoving) {
+        wasMoving = true;
+        stopCount = 0;
+        sendTwistCommand(selectedRobotId, linearX, linearY, angularZ);
+      } else if (wasMoving && stopCount < 3) {
+        stopCount++;
+        sendTwistCommand(selectedRobotId, 0, 0, 0);
+        if (stopCount >= 3) {
+          wasMoving = false;
+        }
+      }
     }, 50);
 
     return () => clearInterval(interval);
