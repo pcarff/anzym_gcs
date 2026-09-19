@@ -198,7 +198,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
     const render = () => {
       pulseAngle += 0.05;
-      ctx.fillStyle = '#090d16';
+      ctx.fillStyle = '#09080c'; // Deep obsidian iron black
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
@@ -209,7 +209,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
       // 1. Draw Grid (centered at origin, 1 meter grid lines = 35px)
       const pxPerMeter = 35;
       const gridExtent = 1200;
-      ctx.strokeStyle = '#1e293b';
+      ctx.strokeStyle = '#26201a'; // Aged bronze iron grid line
       ctx.lineWidth = 1 / zoomLevel;
       for (let i = -gridExtent; i <= gridExtent; i += pxPerMeter) {
         ctx.beginPath();
@@ -223,8 +223,8 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         ctx.stroke();
       }
 
-      // Draw Metric Axes Crosshair
-      ctx.strokeStyle = '#334155';
+      // Draw Metric Axes Crosshair (Antique Brass Meridian Lines)
+      ctx.strokeStyle = '#6e5329';
       ctx.lineWidth = 1.5 / zoomLevel;
       ctx.beginPath();
       ctx.moveTo(-gridExtent, 0);
@@ -236,22 +236,23 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
       ctx.lineTo(0, gridExtent);
       ctx.stroke();
 
-      // Draw Home Origin (0,0) Marker
-      ctx.fillStyle = '#64748b';
+      // Draw Home Origin (0,0) Marker (Brass Compass Hub)
+      ctx.fillStyle = '#d4af37';
       ctx.beginPath();
-      ctx.arc(0, 0, 4 / zoomLevel, 0, 2 * Math.PI);
+      ctx.arc(0, 0, 4.5 / zoomLevel, 0, 2 * Math.PI);
       ctx.fill();
-      ctx.font = `${Math.max(9, 10 / zoomLevel)}px monospace`;
-      ctx.fillText('(0,0) Origin', 6 / zoomLevel, -6 / zoomLevel);
+      ctx.fillStyle = '#dcb94e';
+      ctx.font = `${Math.max(9, 10 / zoomLevel)}px 'Space Mono', monospace`;
+      ctx.fillText('(0,0) Meridian Origin', 6 / zoomLevel, -6 / zoomLevel);
 
       // 2. Draw Real-time Planned Path Polyline (/plan)
       if (showPathOverlay && plannedPath && plannedPath.length > 0) {
         ctx.save();
-        ctx.strokeStyle = '#38bdf8';
+        ctx.strokeStyle = '#f3ca52'; // Radiant Gold
         ctx.lineWidth = 3 / zoomLevel;
         ctx.setLineDash([6 / zoomLevel, 4 / zoomLevel]);
-        ctx.shadowColor = '#0284c7';
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#c59b27'; // Antique brass glow
+        ctx.shadowBlur = 10;
 
         ctx.beginPath();
         plannedPath.forEach((pt, idx) => {
@@ -269,27 +270,27 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         const goalScreenX = activeNavGoal.x * pxPerMeter;
         const goalScreenY = -activeNavGoal.y * pxPerMeter;
 
-        // Animated Beacon Pulse Ring
+        // Animated Beacon Pulse Ring (Antique Brass Sextant Ring)
         ctx.save();
         ctx.translate(goalScreenX, goalScreenY);
 
         const ringRadius = (12 + Math.sin(pulseAngle) * 4) / zoomLevel;
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.7)';
         ctx.lineWidth = 2 / zoomLevel;
         ctx.arc(0, 0, ringRadius, 0, 2 * Math.PI);
         ctx.stroke();
 
-        // Goal Pin Center
-        ctx.fillStyle = '#38bdf8';
+        // Goal Pin Center (Burnished Copper Hub)
+        ctx.fillStyle = '#e07a5f';
         ctx.beginPath();
         ctx.arc(0, 0, 6 / zoomLevel, 0, 2 * Math.PI);
         ctx.fill();
 
-        // Goal Heading Orientation Arrow
+        // Goal Heading Orientation Arrow (Gold Pointer)
         if (activeNavGoal.theta !== undefined) {
           ctx.rotate(-activeNavGoal.theta);
-          ctx.strokeStyle = '#38bdf8';
+          ctx.strokeStyle = '#f3ca52';
           ctx.lineWidth = 2.5 / zoomLevel;
           ctx.beginPath();
           ctx.moveTo(0, 0);
@@ -303,10 +304,10 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         ctx.restore();
 
         // Goal Text Label
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = `${Math.max(10, 11 / zoomLevel)}px monospace`;
+        ctx.fillStyle = '#f3ca52';
+        ctx.font = `${Math.max(10, 11 / zoomLevel)}px 'Space Mono', monospace`;
         ctx.fillText(
-          `🎯 Goal: (${activeNavGoal.x.toFixed(1)}m, ${activeNavGoal.y.toFixed(1)}m)`,
+          `🎯 Waypoint: (${activeNavGoal.x.toFixed(1)}m, ${activeNavGoal.y.toFixed(1)}m)`,
           goalScreenX + 10 / zoomLevel,
           goalScreenY - 10 / zoomLevel
         );
@@ -322,14 +323,14 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         const currentScreenY = -currentWorld.y * pxPerMeter;
 
         ctx.save();
-        // Destination Pin Preview
-        ctx.fillStyle = '#f59e0b';
+        // Destination Pin Preview (Copper)
+        ctx.fillStyle = '#e07a5f';
         ctx.beginPath();
         ctx.arc(startScreenX, startScreenY, 6 / zoomLevel, 0, 2 * Math.PI);
         ctx.fill();
 
-        // Heading Vector Line
-        ctx.strokeStyle = '#f59e0b';
+        // Heading Vector Line (Gold)
+        ctx.strokeStyle = '#f3ca52';
         ctx.lineWidth = 2 / zoomLevel;
         ctx.setLineDash([4 / zoomLevel, 3 / zoomLevel]);
         ctx.beginPath();
@@ -373,17 +374,17 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
               const hitX = Math.cos(angle) * screenDist;
               const hitY = Math.sin(angle) * screenDist;
 
-              // Laser ray
+              // Laser ray (Warm golden ray)
               ctx.beginPath();
-              ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+              ctx.strokeStyle = 'rgba(212, 175, 55, 0.08)';
               ctx.lineWidth = 0.5 / zoomLevel;
               ctx.moveTo(0, 0);
               ctx.lineTo(hitX, hitY);
               ctx.stroke();
 
-              // Laser Point
+              // Laser Point (Warm amber, copper, and radiant brass)
               ctx.beginPath();
-              ctx.fillStyle = i % 2 === 0 ? '#38bdf8' : '#10b981';
+              ctx.fillStyle = i % 3 === 0 ? '#ff9e2c' : i % 3 === 1 ? '#e07a5f' : '#f3ca52';
               ctx.arc(hitX, hitY, 2.5 / zoomLevel, 0, 2 * Math.PI);
               ctx.fill();
             });
@@ -392,19 +393,19 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
           }
         }
 
-        // Draw Robot Body Triangle
+        // Draw Robot Body Triangle (Steampunk Automaton Chevron)
         ctx.save();
         ctx.translate(screenX, screenY);
         ctx.rotate(-robot.position.theta);
 
         const colors: Record<string, string> = {
-          ONLINE: '#10b981',
-          OFFLINE: '#ef4444',
-          BUSY: '#f59e0b',
-          ERROR: '#dc2626',
-          IDLE: '#6366f1',
+          ONLINE: '#2ec4b6', // Jade / Verdigris Brass
+          OFFLINE: '#8e8271', // Patina Iron
+          BUSY: '#f59e0b', // Incandescent Amber
+          ERROR: '#ef4444', // Ruby Flame
+          IDLE: '#b87333', // Hammered Copper
         };
-        ctx.fillStyle = colors[robot.status] || '#94a3b8';
+        ctx.fillStyle = colors[robot.status] || '#c59b27';
 
         ctx.beginPath();
         ctx.moveTo(16 / zoomLevel, 0);
@@ -413,10 +414,10 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
         ctx.closePath();
         ctx.fill();
 
-        // Highlight ring around selected robot
+        // Highlight ring around selected robot (Radiant Gold Bezel)
         if (isSelected) {
           ctx.beginPath();
-          ctx.strokeStyle = '#38bdf8';
+          ctx.strokeStyle = '#f3ca52';
           ctx.lineWidth = 2 / zoomLevel;
           ctx.arc(0, 0, 20 / zoomLevel, 0, 2 * Math.PI);
           ctx.stroke();
@@ -424,10 +425,11 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
         ctx.restore();
 
-        // Label
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = `${Math.max(10, Math.min(14, 12 / zoomLevel))}px monospace`;
+        // Label (Aged Parchment Typography)
+        ctx.fillStyle = '#f4ecd8';
+        ctx.font = `${Math.max(10, Math.min(14, 12 / zoomLevel))}px 'Space Mono', monospace`;
         ctx.fillText(robot.name || robot.id, screenX - 20, screenY - 25 / zoomLevel);
+        ctx.fillStyle = '#bfae91';
         ctx.fillText(`POS: (${robot.position.x.toFixed(1)}, ${robot.position.y.toFixed(1)})`, screenX - 20, screenY + 32 / zoomLevel);
       });
 
@@ -459,23 +461,23 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
   return (
     <div className="relative w-full h-full flex flex-col">
       {/* Header Controls Bar */}
-      <div className="mb-3 flex items-center justify-between bg-slate-900/80 p-2 rounded-xl border border-slate-800 backdrop-blur-md">
-        <div className="flex items-center space-x-2 text-xs font-semibold text-slate-300 px-2">
-          <Compass className="w-4 h-4 text-blue-400" />
-          <span>Autonomous Navigation & Spatial Map</span>
+      <div className="mb-3 flex items-center justify-between bg-gradient-to-r from-[#14121a] via-[#1c1824] to-[#14121a] p-2.5 rounded-xl border border-[#4a3d2e] shadow-lg shadow-black/60">
+        <div className="flex items-center space-x-2 text-xs font-serif font-bold text-gold-400 px-2 tracking-wide">
+          <Compass className="w-4 h-4 text-gold-400" />
+          <span>Navigational Chart & Spatial Plot</span>
         </div>
 
         <div className="flex items-center space-x-2">
           {/* Interaction Mode Toggle */}
           {viewMode === 'native' && (
-            <div className="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <div className="flex items-center bg-[#0a090d] p-1 rounded-lg border border-[#382f25] shadow-gauge-inset">
               <button
                 onClick={() => setInteractMode('nav_goal')}
                 title="Click and drag on map to dispatch autonomous navigation goal"
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-serif font-bold transition-all ${
                   interactMode === 'nav_goal'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'steampunk-btn-brass'
+                    : 'text-steampunk-parchment-muted hover:text-gold-300'
                 }`}
               >
                 <Crosshair className="w-3.5 h-3.5" />
@@ -485,10 +487,10 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
               <button
                 onClick={() => setInteractMode('pan')}
                 title="Pan and inspect canvas map"
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-serif font-bold transition-all ${
                   interactMode === 'pan'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'steampunk-btn-copper'
+                    : 'text-steampunk-parchment-muted hover:text-gold-300'
                 }`}
               >
                 <Hand className="w-3.5 h-3.5" />
@@ -501,25 +503,25 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
           {viewMode === 'native' && (
             <button
               onClick={() => setShowLidarOverlay(!showLidarOverlay)}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-medium border transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-mono font-semibold border transition-all ${
                 showLidarOverlay
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                  ? 'bg-[#251e14] text-gold-300 border-brass-500 shadow-brass-sm'
+                  : 'bg-[#0a090d] text-[#8e8271] border-[#382f25] hover:text-[#f4ecd8]'
               }`}
             >
-              <Radio className={`w-3.5 h-3.5 ${showLidarOverlay ? 'animate-pulse text-emerald-400' : ''}`} />
+              <Radio className={`w-3.5 h-3.5 ${showLidarOverlay ? 'animate-pulse text-gold-400' : ''}`} />
               <span>LiDAR Overlay</span>
             </button>
           )}
 
           {/* View Switcher */}
-          <div className="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800">
+          <div className="flex items-center bg-[#0a090d] p-1 rounded-lg border border-[#382f25] shadow-gauge-inset">
             <button
               onClick={() => setViewMode('native')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-serif font-bold transition-all ${
                 viewMode === 'native'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'steampunk-btn-brass'
+                  : 'text-steampunk-parchment-muted hover:text-gold-300'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -528,10 +530,10 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
 
             <button
               onClick={() => setViewMode('foxglove')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-serif font-bold transition-all ${
                 viewMode === 'foxglove'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'steampunk-btn-copper'
+                  : 'text-steampunk-parchment-muted hover:text-copper-300'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -555,84 +557,87 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
                 setHoverWorldPos(null);
                 handleMouseUp();
               }}
-              className={`w-full h-full border border-slate-800 rounded-xl shadow-inner bg-slate-950 block ${
+              className={`w-full h-full border border-[#4a3d2e] rounded-xl shadow-inner bg-[#09080c] block ${
                 interactMode === 'nav_goal' ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
               }`}
             />
 
             {/* Info Badge */}
-            <div className="absolute top-4 left-4 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl text-slate-200 text-xs space-y-1.5 shadow-xl pointer-events-none">
-              <div className="font-semibold text-slate-100 flex items-center justify-between gap-4">
-                <span>Active Target: {activeRobot?.name || activeRobot?.id}</span>
-                <span className="text-[10px] font-mono bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
+            <div className="absolute top-4 left-4 bg-[#0c0b0e]/95 backdrop-blur-md border border-[#5c4728] p-3 rounded-xl text-[#f4ecd8] text-xs space-y-1.5 shadow-2xl pointer-events-none">
+              <div className="font-serif font-bold text-gold-400 flex items-center justify-between gap-4">
+                <span className="flex items-center gap-1.5">
+                  <span className="steampunk-rivet" />
+                  <span>Target: {activeRobot?.name || activeRobot?.id}</span>
+                </span>
+                <span className="text-[10px] font-mono bg-[#251e16] text-brass-300 border border-brass-700/50 px-1.5 py-0.5 rounded">
                   {activeRobot?.platform_type || 'anzym_rosorin'}
                 </span>
               </div>
-              <div className="text-slate-400 text-[11px] flex items-center gap-2">
-                <span>Mode: <strong className="text-emerald-400">{interactMode === 'nav_goal' ? 'Click & Drag Target Goal' : 'Pan & Zoom'}</strong></span>
+              <div className="text-steampunk-parchment-muted text-[11px] flex items-center gap-2 font-mono">
+                <span>Mode: <strong className="text-gold-400">{interactMode === 'nav_goal' ? 'Deploy Waypoint' : 'Pan & Zoom'}</strong></span>
                 <span>•</span>
-                <span className="text-blue-400 font-mono">
+                <span className="text-copper-400">
                   Pos: ({activeRobot?.position?.x?.toFixed(2) || '0.00'}, {activeRobot?.position?.y?.toFixed(2) || '0.00'})
                 </span>
                 {hoverWorldPos && (
                   <>
                     <span>•</span>
-                    <span className="text-emerald-400 font-mono font-semibold">
+                    <span className="text-[#2ec4b6] font-semibold">
                       Cursor: ({hoverWorldPos.x.toFixed(2)}m, {hoverWorldPos.y.toFixed(2)}m)
                     </span>
                   </>
                 )}
               </div>
-              <div className="text-[10px] text-slate-500 italic pt-1">
+              <div className="text-[10px] text-[#8e8271] italic pt-1 font-serif">
                 {interactMode === 'nav_goal'
-                  ? 'Click & drag cursor to set destination waypoint and heading angle'
-                  : 'Left click & drag to pan • Scroll wheel to zoom'}
+                  ? 'Drag cursor across coordinates to align destination angle'
+                  : 'Click & drag canvas to navigate • Scroll wheel to magnify'}
               </div>
             </div>
 
             {/* Floating Navigation Control HUD */}
-            <div className="absolute top-4 right-4 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-2 rounded-xl text-slate-200 text-xs flex items-center space-x-2 shadow-2xl">
+            <div className="absolute top-4 right-4 bg-[#0c0b0e]/95 backdrop-blur-md border border-[#5c4728] p-2 rounded-xl text-[#f4ecd8] text-xs flex items-center space-x-2 shadow-2xl">
               {navStatus === 'NAVIGATING' ? (
-                <div className="flex items-center space-x-2 px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="text-emerald-300 font-medium text-[11px]">Navigating to Goal</span>
+                <div className="flex items-center space-x-2 px-2.5 py-1 bg-[#0f2420] border border-[#2ec4b6]/50 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-[#2ec4b6] animate-ping" />
+                  <span className="text-[#2ec4b6] font-serif font-bold text-[11px]">En Route to Waypoint</span>
                   <button
                     onClick={handleCancelGoal}
-                    className="flex items-center space-x-1 px-2 py-0.5 bg-red-600/80 hover:bg-red-600 text-white rounded text-[10px] font-semibold transition-colors"
+                    className="flex items-center space-x-1 px-2 py-0.5 bg-[#8c1d1d] hover:bg-[#a32222] border border-[#cb6d51] text-white rounded text-[10px] font-serif font-bold transition-colors"
                   >
                     <XOctagon className="w-3 h-3" />
-                    <span>Cancel Goal</span>
+                    <span>Halt</span>
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={handleReturnHome}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-medium text-xs border border-slate-700 transition-colors"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#181520] hover:bg-[#251e2c] text-brass-300 rounded-lg font-serif font-bold text-xs border border-[#5c4728] transition-colors"
                 >
-                  <Home className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Return Home (0,0)</span>
+                  <Home className="w-3.5 h-3.5 text-copper-400" />
+                  <span>Return to Port (0,0)</span>
                 </button>
               )}
             </div>
 
             {/* Canvas Zoom Controls Bar */}
-            <div className="absolute bottom-4 right-4 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-1.5 rounded-xl text-slate-200 text-xs flex items-center space-x-1 shadow-2xl">
+            <div className="absolute bottom-4 right-4 bg-[#0c0b0e]/95 backdrop-blur-md border border-[#5c4728] p-1.5 rounded-xl text-[#f4ecd8] text-xs flex items-center space-x-1 shadow-2xl">
               <button
                 onClick={handleZoomIn}
                 title="Zoom In"
-                className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-colors"
+                className="p-1.5 hover:bg-[#251e2c] text-brass-300 hover:text-gold-300 rounded-lg transition-colors"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
 
-              <span className="px-2 font-mono text-xs text-blue-400 font-semibold border-x border-slate-800">
+              <span className="px-2 font-mono text-xs text-gold-400 font-bold border-x border-[#382f25]">
                 {Math.round(zoomLevel * 100)}%
               </span>
 
               <button
                 onClick={handleZoomOut}
                 title="Zoom Out"
-                className="p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg transition-colors"
+                className="p-1.5 hover:bg-[#251e2c] text-brass-300 hover:text-gold-300 rounded-lg transition-colors"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
@@ -640,7 +645,7 @@ export function MapCanvas({ mapboxToken, onCoordinateClick, selectedRobotHost = 
               <button
                 onClick={handleResetZoom}
                 title="Reset Zoom & Pan"
-                className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition-colors border-l border-slate-800"
+                className="p-1.5 hover:bg-[#251e2c] text-copper-400 hover:text-copper-300 rounded-lg transition-colors border-l border-[#382f25]"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>

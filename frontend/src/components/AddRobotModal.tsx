@@ -106,23 +106,25 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-[#131118] border-2 border-[#5c4728] rounded-2xl max-w-2xl w-full overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.95)] animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
+        <div className="px-6 py-4 bg-gradient-to-r from-[#17141f] via-[#221c2a] to-[#17141f] border-b border-[#4a3d2e] flex items-center justify-between">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-2 bg-gradient-to-br from-brass-500/20 to-copper-500/20 border border-brass-400/50 rounded-xl text-gold-400 shadow-brass-sm">
               <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-100">Add Robot Platform Template</h2>
-              <p className="text-xs text-slate-400">Instantiate baseline requirements & recommended plugins</p>
+              <h2 className="text-base font-serif font-bold text-gold-400 tracking-wide flex items-center gap-2">
+                <span>Commission Automaton Template</span>
+              </h2>
+              <p className="text-xs text-steampunk-parchment-muted font-mono">Select blueprint specifications & avionics modules</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-brass-400 hover:text-gold-300 rounded-lg hover:bg-[#251e16] transition-colors border border-transparent hover:border-brass-600/50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -132,8 +134,9 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
           
           {/* Step 1: Select Platform Template */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
-              1. Select Platform Template
+            <label className="text-xs font-serif font-bold uppercase tracking-widest text-gold-400 block mb-3 flex items-center gap-1.5">
+              <span className="steampunk-rivet" />
+              <span>1. Select Mechanical Blueprint</span>
             </label>
             <div className="grid grid-cols-3 gap-3">
               
@@ -142,24 +145,26 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
                 onClick={() => handleTemplateSelect('anzym_x3_plus')}
                 className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
                   selectedTemplate === 'anzym_x3_plus'
-                    ? 'bg-emerald-600/10 border-emerald-500 shadow-lg shadow-emerald-500/10'
-                    : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                    ? 'bg-[#281d11] border-brass-400 shadow-brass-sm ring-1 ring-brass-400/40'
+                    : 'bg-[#0a090d] border-[#382f25] hover:border-brass-600'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                  <span className="text-xs font-serif font-bold text-[#f4ecd8] flex items-center gap-1.5">
                     anzym_x3_plus
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-300">
-                      Mecanum + Arm
-                    </span>
                   </span>
                   {selectedTemplate === 'anzym_x3_plus' && (
-                    <div className="p-1 bg-emerald-500 rounded-full text-white">
-                      <Check className="w-3 h-3" />
+                    <div className="p-1 bg-brass-500 rounded-full text-steampunk-dark shadow-brass-sm">
+                      <Check className="w-3 h-3 stroke-[3]" />
                     </div>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-3">
+                <div className="mb-1.5">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-[#251e16] border border-brass-700/50 text-brass-300">
+                    Mecanum + Arm
+                  </span>
+                </div>
+                <p className="text-[11px] text-steampunk-parchment-muted line-clamp-3">
                   Yahboom ROSMaster X3 Plus 4WD Mecanum AMR with 6-DOF Arm, Astra Pro RGB-D, YDLidar, IMU, and WebRTC.
                 </p>
               </div>
@@ -169,25 +174,27 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
                 onClick={() => handleTemplateSelect('anzym_rosorin')}
                 className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
                   selectedTemplate === 'anzym_rosorin'
-                    ? 'bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10'
-                    : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                    ? 'bg-[#281d11] border-brass-400 shadow-brass-sm ring-1 ring-brass-400/40'
+                    : 'bg-[#0a090d] border-[#382f25] hover:border-brass-600'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                  <span className="text-xs font-serif font-bold text-[#f4ecd8] flex items-center gap-1.5">
                     anzym_rosorin
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-blue-500/20 text-blue-300">
-                      Diff AMR
-                    </span>
                   </span>
                   {selectedTemplate === 'anzym_rosorin' && (
-                    <div className="p-1 bg-blue-500 rounded-full text-white">
-                      <Check className="w-3 h-3" />
+                    <div className="p-1 bg-brass-500 rounded-full text-steampunk-dark shadow-brass-sm">
+                      <Check className="w-3 h-3 stroke-[3]" />
                     </div>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-3">
-                  NVIDIA Orin-powered AMR platform with camera feed, 2D LiDAR, Foxglove 3D visualizer, and Nav2.
+                <div className="mb-1.5">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-[#251e16] border border-copper-700/50 text-copper-300">
+                    Ackermann AMR
+                  </span>
+                </div>
+                <p className="text-[11px] text-steampunk-parchment-muted line-clamp-3">
+                  NVIDIA Orin-powered AMR platform with camera feed, 2D LiDAR, Foxglove 3D visualizer, and Nav2 TEB.
                 </p>
               </div>
 
@@ -196,24 +203,26 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
                 onClick={() => handleTemplateSelect('anzym_zumo')}
                 className={`cursor-pointer p-3.5 rounded-xl border transition-all ${
                   selectedTemplate === 'anzym_zumo'
-                    ? 'bg-indigo-600/10 border-indigo-500 shadow-lg shadow-indigo-500/10'
-                    : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                    ? 'bg-[#281d11] border-brass-400 shadow-brass-sm ring-1 ring-brass-400/40'
+                    : 'bg-[#0a090d] border-[#382f25] hover:border-brass-600'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                  <span className="text-xs font-serif font-bold text-[#f4ecd8] flex items-center gap-1.5">
                     anzym_zumo
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-indigo-500/20 text-indigo-300">
-                      Micro Tracked
-                    </span>
                   </span>
                   {selectedTemplate === 'anzym_zumo' && (
-                    <div className="p-1 bg-indigo-500 rounded-full text-white">
-                      <Check className="w-3 h-3" />
+                    <div className="p-1 bg-brass-500 rounded-full text-steampunk-dark shadow-brass-sm">
+                      <Check className="w-3 h-3 stroke-[3]" />
                     </div>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 line-clamp-3">
+                <div className="mb-1.5">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-[#251e16] border border-brass-700/50 text-gold-300">
+                    Micro Tracked
+                  </span>
+                </div>
+                <p className="text-[11px] text-steampunk-parchment-muted line-clamp-3">
                   Compact micro tracked AMR for agile exploration, gamepad teleop, and lightweight WebRTC camera feed.
                 </p>
               </div>
@@ -222,51 +231,52 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
 
           {/* Step 2: Connection Parameters */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
-              2. Connection & Instance Metadata
+            <label className="text-xs font-serif font-bold uppercase tracking-widest text-gold-400 block mb-3 flex items-center gap-1.5">
+              <span className="steampunk-rivet" />
+              <span>2. Connection Coordinates & Designation</span>
             </label>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Robot Unique ID</label>
+                <label className="text-xs text-steampunk-parchment-muted font-serif block mb-1">Vessel Identifier (ID)</label>
                 <input
                   type="text"
                   value={robotId}
                   onChange={(e) => setRobotId(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0a090d] border border-[#4a3d2e] rounded-lg px-3 py-2 text-xs font-mono text-[#f4ecd8] focus:outline-none focus:border-brass-400 shadow-gauge-inset"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Display Name</label>
+                <label className="text-xs text-steampunk-parchment-muted font-serif block mb-1">Display Call-Sign</label>
                 <input
                   type="text"
                   value={robotName}
                   onChange={(e) => setRobotName(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0a090d] border border-[#4a3d2e] rounded-lg px-3 py-2 text-xs text-[#f4ecd8] focus:outline-none focus:border-brass-400 shadow-gauge-inset"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Robot Host IP / Domain</label>
+                <label className="text-xs text-steampunk-parchment-muted font-serif block mb-1">Network Host IP / Meridian</label>
                 <input
                   type="text"
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0a090d] border border-[#4a3d2e] rounded-lg px-3 py-2 text-xs font-mono text-[#f4ecd8] focus:outline-none focus:border-brass-400 shadow-gauge-inset"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">rosbridge Port</label>
+                <label className="text-xs text-steampunk-parchment-muted font-serif block mb-1">rosbridge Port</label>
                 <input
                   type="number"
                   value={port}
                   onChange={(e) => setPort(Number(e.target.value))}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0a090d] border border-[#4a3d2e] rounded-lg px-3 py-2 text-xs font-mono text-[#f4ecd8] focus:outline-none focus:border-brass-400 shadow-gauge-inset"
                 />
               </div>
             </div>
@@ -274,88 +284,89 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
 
           {/* Step 3: Recommended Plugin Selection */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
-              3. Enabled Plugins & Features
+            <label className="text-xs font-serif font-bold uppercase tracking-widest text-gold-400 block mb-3 flex items-center gap-1.5">
+              <span className="steampunk-rivet" />
+              <span>3. Integrated Apparatus & Modules</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
               
               <div
                 onClick={() => togglePlugin('video_webrtc')}
-                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between ${
+                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between transition-all ${
                   enabledPlugins.includes('video_webrtc')
-                    ? 'bg-slate-800/80 border-slate-700 text-slate-200'
-                    : 'bg-slate-950/40 border-slate-800/50 text-slate-500'
+                    ? 'bg-[#251e16] border-brass-600/70 text-[#f4ecd8] shadow-brass-sm'
+                    : 'bg-[#0a090d] border-[#382f25] text-[#8e8271]'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Camera className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs font-medium">WebRTC Video Stream</span>
+                  <Camera className="w-4 h-4 text-brass-400" />
+                  <span className="text-xs font-serif font-medium">WebRTC Optical Link</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={enabledPlugins.includes('video_webrtc')}
                   readOnly
-                  className="rounded border-slate-700 bg-slate-900"
+                  className="rounded border-[#4a3d2e] bg-[#0a090d] text-brass-500"
                 />
               </div>
 
               <div
                 onClick={() => togglePlugin('foxglove_visualizer')}
-                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between ${
+                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between transition-all ${
                   enabledPlugins.includes('foxglove_visualizer')
-                    ? 'bg-slate-800/80 border-slate-700 text-slate-200'
-                    : 'bg-slate-950/40 border-slate-800/50 text-slate-500'
+                    ? 'bg-[#251e16] border-brass-600/70 text-[#f4ecd8] shadow-brass-sm'
+                    : 'bg-[#0a090d] border-[#382f25] text-[#8e8271]'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  <span className="text-xs font-medium">Foxglove Studio 3D</span>
+                  <Sparkles className="w-4 h-4 text-copper-400" />
+                  <span className="text-xs font-serif font-medium">Foxglove 3D Spatial Hub</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={enabledPlugins.includes('foxglove_visualizer')}
                   readOnly
-                  className="rounded border-slate-700 bg-slate-900"
+                  className="rounded border-[#4a3d2e] bg-[#0a090d] text-brass-500"
                 />
               </div>
 
               <div
                 onClick={() => togglePlugin('lidar_2d_3d')}
-                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between ${
+                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between transition-all ${
                   enabledPlugins.includes('lidar_2d_3d')
-                    ? 'bg-slate-800/80 border-slate-700 text-slate-200'
-                    : 'bg-slate-950/40 border-slate-800/50 text-slate-500'
+                    ? 'bg-[#251e16] border-brass-600/70 text-[#f4ecd8] shadow-brass-sm'
+                    : 'bg-[#0a090d] border-[#382f25] text-[#8e8271]'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Layers className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-medium">2D/3D LiDAR Costmaps</span>
+                  <Layers className="w-4 h-4 text-[#2ec4b6]" />
+                  <span className="text-xs font-serif font-medium">2D/3D LiDAR Costmaps</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={enabledPlugins.includes('lidar_2d_3d')}
                   readOnly
-                  className="rounded border-slate-700 bg-slate-900"
+                  className="rounded border-[#4a3d2e] bg-[#0a090d] text-brass-500"
                 />
               </div>
 
               <div
                 onClick={() => togglePlugin('gamepad_teleop')}
-                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between ${
+                className={`cursor-pointer p-3 rounded-lg border flex items-center justify-between transition-all ${
                   enabledPlugins.includes('gamepad_teleop')
-                    ? 'bg-slate-800/80 border-slate-700 text-slate-200'
-                    : 'bg-slate-950/40 border-slate-800/50 text-slate-500'
+                    ? 'bg-[#251e16] border-brass-600/70 text-[#f4ecd8] shadow-brass-sm'
+                    : 'bg-[#0a090d] border-[#382f25] text-[#8e8271]'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  <Play className="w-4 h-4 text-amber-400" />
-                  <span className="text-xs font-medium">Gamepad Remote Teleop</span>
+                  <Play className="w-4 h-4 text-gold-400" />
+                  <span className="text-xs font-serif font-medium">Gamepad Telegraph Teleop</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={enabledPlugins.includes('gamepad_teleop')}
                   readOnly
-                  className="rounded border-slate-700 bg-slate-900"
+                  className="rounded border-[#4a3d2e] bg-[#0a090d] text-brass-500"
                 />
               </div>
 
@@ -363,25 +374,25 @@ export const AddRobotModal: React.FC<AddRobotModalProps> = ({
           </div>
 
           {/* Footer Submit */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-            <div className="flex items-center space-x-1.5 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Includes baseline safety & heartbeat</span>
+          <div className="pt-4 border-t border-[#3c3227] flex items-center justify-between">
+            <div className="flex items-center space-x-1.5 text-xs text-steampunk-parchment-muted">
+              <ShieldCheck className="w-4 h-4 text-[#2ec4b6]" />
+              <span className="font-serif">Includes baseline safety watchdog & heartbeat</span>
             </div>
             <div className="flex items-center space-x-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition-colors"
+                className="px-4 py-2 bg-[#1c1822] hover:bg-[#251f2e] text-steampunk-parchment-muted text-xs font-serif font-semibold rounded-xl border border-[#3c3227] transition-colors"
               >
-                Cancel
+                Dismiss
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-xl transition-colors shadow-lg shadow-blue-500/20 flex items-center space-x-2"
+                className="steampunk-btn-brass px-5 py-2 text-xs font-serif font-bold rounded-xl transition-all shadow-brass-sm flex items-center space-x-2"
               >
-                <span>{isSubmitting ? 'Registering...' : 'Provision Robot Instance'}</span>
+                <span>{isSubmitting ? 'Registering...' : 'Provision Vessel Instance'}</span>
               </button>
             </div>
           </div>

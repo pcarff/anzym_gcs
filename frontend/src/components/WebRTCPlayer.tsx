@@ -174,24 +174,24 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl flex flex-col h-full">
+    <div className="bg-[#131118] border border-[#4a3d2e] rounded-xl overflow-hidden shadow-2xl flex flex-col h-full">
       {/* Stream Header */}
-      <div className="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="p-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400">
+      <div className="px-4 py-2.5 bg-gradient-to-r from-[#16131c] via-[#1f1a27] to-[#16131c] border-b border-[#4a3d2e] flex items-center justify-between">
+        <div className="flex items-center space-x-2.5">
+          <div className="p-1.5 bg-gradient-to-br from-brass-500/20 to-copper-500/20 border border-brass-500/40 rounded-lg text-gold-400 shadow-brass-sm">
             <Video className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <h3 className="text-sm font-serif font-bold text-gold-400 flex items-center gap-2">
               <span>{robotName}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+              <span className="text-[10px] px-2 py-0.5 rounded border border-brass-700/50 bg-[#251e16] text-brass-300 font-mono">
                 {platformType}
               </span>
             </h3>
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+            <div className="flex items-center gap-2 text-xs text-steampunk-parchment-muted font-mono">
               <span>{topic}</span>
               {latencyMs !== null && streamMode === 'webrtc' && (
-                <span className="text-[10px] text-emerald-400 font-sans">
+                <span className="text-[10px] text-[#2ec4b6] font-mono font-semibold">
                   ({latencyMs}ms latency)
                 </span>
               )}
@@ -202,13 +202,13 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         {/* Protocol Selector & Status */}
         <div className="flex items-center space-x-2.5">
           {/* WebRTC vs MJPEG Toggle */}
-          <div className="bg-slate-900 border border-slate-800 rounded-lg p-0.5 flex text-xs font-mono">
+          <div className="bg-[#0a090d] border border-[#382f25] rounded-lg p-0.5 flex text-xs font-mono shadow-gauge-inset">
             <button
               onClick={() => setStreamMode('webrtc')}
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2.5 py-1 rounded flex items-center gap-1 transition-all ${
                 streamMode === 'webrtc'
-                  ? 'bg-blue-600 text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'steampunk-btn-brass'
+                  : 'text-steampunk-parchment-muted hover:text-gold-300'
               }`}
               title="Fast WebRTC H.264 Protocol"
             >
@@ -217,10 +217,10 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
             </button>
             <button
               onClick={() => setStreamMode('mjpeg')}
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2.5 py-1 rounded flex items-center gap-1 transition-all ${
                 streamMode === 'mjpeg'
-                  ? 'bg-slate-700 text-white font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'steampunk-btn-copper'
+                  : 'text-steampunk-parchment-muted hover:text-gold-300'
               }`}
               title="HTTP MJPEG Fallback Stream"
             >
@@ -230,27 +230,27 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
           </div>
 
           {/* Connection Status Badge */}
-          <div className={`flex items-center space-x-1.5 text-xs px-2.5 py-1 rounded-md font-medium border ${
+          <div className={`flex items-center space-x-1.5 text-xs px-2.5 py-1 rounded-md font-mono font-bold border ${
             connectionState === 'connected'
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              ? 'bg-[#0f2420] text-[#2ec4b6] border-[#2ec4b6]/50 shadow-[0_0_8px_rgba(46,196,182,0.25)]'
               : connectionState === 'connecting'
-              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              ? 'bg-[#281b0e] text-[#f59e0b] border-[#f59e0b]/50 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
               : connectionState === 'error'
-              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-              : 'bg-slate-800 text-slate-400 border-slate-700'
+              ? 'bg-[#291010] text-[#ef4444] border-[#ef4444]/50 shadow-[0_0_8px_rgba(239,68,68,0.25)]'
+              : 'bg-[#18151f] text-[#8e8271] border-[#382f25]'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
-              connectionState === 'connected' ? 'bg-emerald-400 animate-pulse'
-              : connectionState === 'connecting' ? 'bg-amber-400 animate-ping'
-              : connectionState === 'error' ? 'bg-rose-400'
-              : 'bg-slate-500'
+              connectionState === 'connected' ? 'bg-[#2ec4b6] shadow-[0_0_6px_#2ec4b6] animate-pulse'
+              : connectionState === 'connecting' ? 'bg-[#f59e0b] shadow-[0_0_6px_#f59e0b] animate-ping'
+              : connectionState === 'error' ? 'bg-[#ef4444] shadow-[0_0_6px_#ef4444]'
+              : 'bg-[#8e8271]'
             }`} />
             <span>{connectionState === 'connected' ? 'LIVE' : connectionState.toUpperCase()}</span>
           </div>
 
           <button
             onClick={handleReconnect}
-            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 hover:bg-[#251e2c] rounded-lg text-brass-300 hover:text-gold-300 transition-colors"
             title="Reconnect Stream"
           >
             <RefreshCw className={`w-4 h-4 ${connectionState === 'connecting' ? 'animate-spin' : ''}`} />
@@ -259,7 +259,7 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
       </div>
 
       {/* Video Viewport */}
-      <div className="relative flex-1 bg-black flex items-center justify-center min-h-[220px] overflow-hidden">
+      <div className="relative flex-1 bg-[#070609] flex items-center justify-center min-h-[220px] overflow-hidden border-t border-[#26201a]">
         {isRobotOnline ? (
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Mode 1: Fast WebRTC H.264 Video */}
@@ -286,23 +286,23 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
 
             {/* Connecting / Error Fallback Overlay */}
             {connectionState !== 'connected' && streamMode === 'webrtc' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950/90 space-y-3">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-[#0c0b0e]/95 space-y-3">
                 <div className={`p-3 border rounded-full ${
                   connectionState === 'error'
-                    ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                    : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                    ? 'bg-[#291010] border-[#ef4444]/40 text-[#ef4444]'
+                    : 'bg-[#281b0e] border-[#f59e0b]/40 text-[#f59e0b]'
                 }`}>
-                  <Video className="w-8 h-8 opacity-60" />
+                  <Video className="w-8 h-8 opacity-75" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-slate-200">
-                    {connectionState === 'error' ? 'WebRTC Stream Offline' : 'Negotiating WebRTC Connection...'}
+                  <h4 className="text-sm font-serif font-bold text-gold-400">
+                    {connectionState === 'error' ? 'Optical Transmission Offline' : 'Calibrating WebRTC Signal...'}
                   </h4>
-                  <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                  <p className="text-xs text-steampunk-parchment-muted mt-1 max-w-sm font-mono">
                     {connectionState === 'error' ? (
-                      <>MediaMTX WebRTC server at <span className="font-mono text-amber-300">{effectiveHost}:{webrtcPort}</span> is unreachable.</>
+                      <>MediaMTX relay node at <span className="font-mono text-gold-300 font-bold">{effectiveHost}:{webrtcPort}</span> is unreachable.</>
                     ) : (
-                      <>Connecting via WHEP H.264 to <span className="font-mono text-amber-300">{effectiveHost}:{webrtcPort}</span>...</>
+                      <>Connecting via WHEP H.264 protocol to <span className="font-mono text-gold-300 font-bold">{effectiveHost}:{webrtcPort}</span>...</>
                     )}
                   </p>
                 </div>
@@ -310,15 +310,15 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
                   <div className="flex gap-2">
                     <button
                       onClick={() => setStreamMode('mjpeg')}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow"
+                      className="steampunk-btn-copper px-3 py-1.5 text-xs font-serif font-bold rounded-lg"
                     >
                       Switch to MJPEG Mode
                     </button>
                     <button
                       onClick={handleReconnect}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700"
+                      className="steampunk-btn-brass px-3 py-1.5 text-xs font-serif font-bold rounded-lg"
                     >
-                      Retry WebRTC
+                      Retry WebRTC Link
                     </button>
                   </div>
                 )}
@@ -326,11 +326,11 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center p-6 text-center space-y-3 text-slate-500">
-            <ShieldAlert className="w-10 h-10 text-slate-600" />
+          <div className="flex flex-col items-center justify-center p-6 text-center space-y-3 text-[#8e8271]">
+            <ShieldAlert className="w-10 h-10 text-[#6e5329]" />
             <div>
-              <p className="text-sm font-medium text-slate-400">Camera Stream Offline</p>
-              <p className="text-xs text-slate-500 font-mono mt-1">Robot is offline</p>
+              <p className="text-sm font-serif font-bold text-gold-400">Optical Sensor Offline</p>
+              <p className="text-xs text-steampunk-parchment-muted font-mono mt-1">Automaton is offline</p>
             </div>
           </div>
         )}
@@ -338,3 +338,4 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
     </div>
   );
 };
+

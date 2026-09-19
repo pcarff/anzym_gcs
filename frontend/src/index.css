@@ -2,13 +2,112 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #111827;
-  color: #ffffff;
+@layer base {
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #0c0b0e;
+    color: #f4ecd8;
+    background-image: radial-gradient(#26201b 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Custom Steampunk Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0e0d12;
+    border-left: 1px solid #2a231b;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #7a6027 0%, #543e0e 100%);
+    border: 1px solid #9e791b;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #c59b27 0%, #775813 100%);
+    border-color: #f3ca52;
+  }
 }
+
+@layer components {
+  /* Steampunk Panel with Antique Brass Inset Border */
+  .steampunk-panel {
+    background-color: #15131a;
+    border: 1px solid #4a3d2e;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(212, 175, 55, 0.15);
+  }
+
+  /* Steampunk Panel with Copper Trim */
+  .steampunk-panel-copper {
+    background-color: #17141b;
+    border: 1px solid #633922;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(224, 122, 95, 0.15);
+  }
+
+  /* Steampunk Gauge Inset Card */
+  .steampunk-gauge-well {
+    background-color: #0a090d;
+    border: 1px solid #382e22;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), inset 0 0 12px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Brass Button */
+  .steampunk-btn-brass {
+    background: linear-gradient(135deg, #dcb94e 0%, #c59b27 50%, #8c671a 100%);
+    color: #0c0b0e;
+    border: 1px solid #f3ca52;
+    font-weight: 700;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transition: all 0.15s ease-in-out;
+  }
+
+  .steampunk-btn-brass:hover {
+    background: linear-gradient(135deg, #fae392 0%, #d4af37 50%, #9e791b 100%);
+    box-shadow: 0 0 14px rgba(212, 175, 55, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* Copper Button */
+  .steampunk-btn-copper {
+    background: linear-gradient(135deg, #ea9f7e 0%, #b87333 50%, #7a421a 100%);
+    color: #fdf4ef;
+    border: 1px solid #e07a5f;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: all 0.15s ease-in-out;
+  }
+
+  .steampunk-btn-copper:hover {
+    background: linear-gradient(135deg, #f3c8b4 0%, #cb6d51 50%, #9c5924 100%);
+    box-shadow: 0 0 14px rgba(184, 115, 51, 0.45);
+  }
+
+  /* Decorative Corner Rivet */
+  .steampunk-rivet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fae392, #9e791b 60%, #332508 100%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 0 1px rgba(255, 255, 255, 0.5);
+  }
+
+  /* Stamped Metal Badge */
+  .steampunk-stamp {
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    border: 1px solid #7a6027;
+    background: rgba(30, 26, 38, 0.8);
+    color: #dcb94e;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+}
+
